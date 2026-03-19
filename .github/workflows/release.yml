@@ -23,10 +23,14 @@ jobs:
 
       - run: npm run build
 
+      - name: Get plugin name
+        id: plugin
+        run: echo "name=$(jq -r '.name | gsub(" "; "-")' manifest.json)" >> $GITHUB_OUTPUT
+
       - name: Zip dist
-        run: zip -r dist.zip dist/
+        run: zip -r "${{ steps.plugin.outputs.name }}.zip" dist/
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist.zip
+          files: "${{ steps.plugin.outputs.name }}.zip"
