@@ -11,8 +11,8 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "jszip": "^3.10.1",
     "gif.js": "^0.2.0",
+    "jszip": "^3.10.1",
     "preact": "^10.24.0"
   },
   "devDependencies": {
@@ -20,7 +20,7 @@
     "@figma/plugin-typings": "^1.100.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
-    "esbuild": "^0.24.0",
+    "esbuild": "^0.27.4",
     "eslint": "^9.0.0",
     "husky": "^9.0.0",
     "lint-staged": "^15.0.0",
