@@ -97,7 +97,7 @@ When clicking "Export":
 3. Compression is applied to meet file size limits.
 4. Results are packaged into ZIP.
 
-After completion, a "Download preview HTML" button is available — opens all exported files as a gallery in the browser.
+The Export button is always visible at the bottom of the window. After export completes, it is replaced by the **Download ZIP** button which shows the ZIP size and file count (e.g. `Скачать ZIP · 2.34 МБ · 42 файла`). If only a specific format or platform was exported, the label includes that filter (e.g. `Скачать ZIP JPG` or `Скачать ZIP VK`). A **preview.html** file is also included in the ZIP — open it in a browser to review all exported images as a gallery.
 
 #### File Size Limits
 
@@ -245,7 +245,7 @@ xxxx-yyy
 3. Применяется сжатие для соблюдения лимитов по размеру файла.
 4. Результат упаковывается в ZIP.
 
-После завершения доступна кнопка «Скачать превью HTML» — открывает все экспортированные файлы в виде галереи в браузере.
+Кнопка «Экспорт» всегда видна внизу окна. После завершения она заменяется кнопкой **«Скачать ZIP»**, на которой отображается размер архива и количество файлов (например, `Скачать ZIP · 2.34 МБ · 42 файла`). Если экспортировался только конкретный формат или площадка, это отображается в метке кнопки (например, `Скачать ZIP JPG` или `Скачать ZIP VK`). В ZIP также включается файл **preview.html** — откройте его в браузере для просмотра всех экспортированных изображений галереей.
 
 #### Лимиты размера
 

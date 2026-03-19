@@ -84,6 +84,10 @@ Frame processing is sequential (one at a time) to avoid overloading the Figma pl
 - **GIF delay**: configurable frame delay (seconds)
 - **Preview HTML**: after export, downloads a self-contained HTML file for visual review. All Figma node names and file paths are HTML-escaped via `escHtml()` before insertion to prevent XSS.
 - **Resize handle**: drag bottom-right corner to resize the plugin window
+- **Sticky tab bar**: tab bar (`Экспорт` / `Разместить`) is `position: sticky; top: 0` so it stays visible while scrolling.
+- **Fixed bottom buttons**: the Export button (phase `ready`) and the Download + "Очистить экспорт" group (phase `done`) are `position: fixed; bottom: 0` and always visible. The content area gets extra `paddingBottom` to avoid overlap. Button padding is overridden via an injected `<style>` tag targeting the `.export-btn-wrap` class (the `Button` component from `@create-figma-plugin/ui` does not accept a padding prop).
+- **Progress bar**: shown only during export (`phase === 'exporting'`); hidden after completion. No "Done" status text is shown.
+- **Download button label**: shows the ZIP size and file count — e.g. `Скачать ZIP · 2.34 МБ · 42 файла`. If a partial export was run (by format or platform), the label also includes the filter — e.g. `Скачать ZIP JPG · …` or `Скачать ZIP VK · …`.
 
 ### Place tab (Разместить)
 - Select frames on the page, choose Format / Channel / Platform / Creative, click "Поместить в секции"
