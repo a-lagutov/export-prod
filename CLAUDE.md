@@ -109,6 +109,8 @@ git push origin v1.2
 
 The workflow builds the plugin and attaches the ZIP (`dist/`) to the GitHub release. Do not create releases manually.
 
+**Release notes** should only cover changes that are visible to the end user or affect their security: new UI features, changed behaviour, bug fixes users will notice, and security fixes. Do not mention internal tooling, dependency upgrades, build pipeline changes, or CI/CD fixes unless they directly affect the user-facing product.
+
 ## Key Dependencies
 
 - `jszip` — ZIP assembly in the browser
