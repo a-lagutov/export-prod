@@ -460,6 +460,17 @@ function FrameRow({
   const inputRef = useRef<HTMLInputElement>(null)
   const [hovered, setHovered] = useState(false)
 
+  function handleInput(e: Event) {
+    const el = e.target as HTMLInputElement
+    const raw = el.value
+    const filtered = raw.replace(/,/g, '.').replace(/[^0-9.]/g, '')
+    const dotIdx = filtered.indexOf('.')
+    const sanitized =
+      dotIdx === -1 ? filtered : filtered.slice(0, dotIdx + 1) + filtered.slice(dotIdx + 1).replace(/\./g, '')
+    if (sanitized !== raw) el.value = sanitized
+    onFrameSizeChange(key, sanitized)
+  }
+
   return (
     <div
       style={{
@@ -485,12 +496,17 @@ function FrameRow({
       </span>
       <input
         ref={inputRef}
-        type="number"
+        type="text"
+        inputMode="decimal"
         placeholder="0"
-        min="0"
-        step="any"
         value={frameSizes[key] ?? ''}
-        onChange={(e) => onFrameSizeChange(key, (e.target as HTMLInputElement).value)}
+        onChange={handleInput}
+        onBlur={() => {
+          let v = frameSizes[key] ?? ''
+          if (v.endsWith('.')) v = v.slice(0, -1)
+          if (v !== '' && parseFloat(v) <= 0) v = ''
+          if (v !== (frameSizes[key] ?? '')) onFrameSizeChange(key, v)
+        }}
         style={{
           width: 48,
           border: '1px solid var(--figma-color-border)',
@@ -623,15 +639,31 @@ function NumInput({
   width?: number
   suffix?: string
 }) {
+  function handleInput(e: Event) {
+    const el = e.target as HTMLInputElement
+    const raw = el.value
+    const filtered = raw.replace(/,/g, '.').replace(/[^0-9.]/g, '')
+    const dotIdx = filtered.indexOf('.')
+    const sanitized =
+      dotIdx === -1 ? filtered : filtered.slice(0, dotIdx + 1) + filtered.slice(dotIdx + 1).replace(/\./g, '')
+    if (sanitized !== raw) el.value = sanitized
+    onChange(sanitized)
+  }
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
       <input
-        type="number"
+        type="text"
+        inputMode="decimal"
         placeholder="0"
-        min="0"
-        step="any"
         value={value}
-        onChange={(e) => onChange((e.target as HTMLInputElement).value)}
+        onChange={handleInput}
+        onBlur={() => {
+          let v = value
+          if (v.endsWith('.')) v = v.slice(0, -1)
+          if (v !== '' && parseFloat(v) <= 0) v = ''
+          if (v !== value) onChange(v)
+        }}
         style={{
           width,
           border: '1px solid var(--figma-color-border)',
