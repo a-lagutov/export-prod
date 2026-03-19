@@ -9,11 +9,29 @@ A Figma plugin ("Export Prod") for batch-exporting frames as JPG, PNG, WebP, or 
 ## Build Commands
 
 ```bash
-npm run build     # Full build: code.ts + ui.tsx → dist/
-npm run watch     # Watch mode for code.ts only (does NOT rebuild ui.html)
+npm run build     # Full build: code.ts + ui.tsx → dist/ (NODE_ENV=production)
+npm run watch     # Watch mode for code.ts only (NODE_ENV=development, does NOT rebuild ui.html)
 ```
 
 There are no tests or linting configured.
+
+## Environment Variables
+
+Env files are loaded in CRA priority order and injected at build time via esbuild `define` as `__VAR__` constants. Only `POSTHOG_*` variables are injected.
+
+Priority for `npm run build`: `.env.production.local` > `.env.local` > `.env.production` > `.env`
+Priority for `npm run watch`: `.env.development.local` > `.env.local` > `.env.development` > `.env`
+
+Committed (non-secret defaults): `.env`, `.env.production`, `.env.development`
+Gitignored (local overrides): `.env.local`, `.env.*.local`
+
+| Variable | Where | Purpose |
+|---|---|---|
+| `POSTHOG_KEY` | `.env.production.local` (gitignored) | Analytics key |
+| `POSTHOG_HOST` | `.env` (committed) | Analytics host; also injected into `dist/manifest.json` → `networkAccess.allowedDomains` |
+| `PLUGIN_NAME` | `.env` (committed) | Plugin display name in Figma; injected into `dist/manifest.json` → `name` |
+
+If a variable is absent, it defaults to an empty string and analytics are silently disabled.
 
 ## Architecture
 
@@ -25,11 +43,12 @@ There are no tests or linting configured.
 **Build pipeline (`scripts/build.js`):**
 1. esbuild bundles `src/code.ts` → `dist/code.js`
 2. Reads `gif.worker.js` from `node_modules/gif.js/dist/` and passes its content to esbuild via `define` as `__GIF_WORKER_CONTENT__` (lazily initialized in the UI via `URL.createObjectURL`)
-3. esbuild bundles `src/ui.tsx` → `dist/ui.js` + `dist/ui.css` (JSX via preact/jsx-runtime)
-4. Inlines `dist/ui.js` and `dist/ui.css` into `dist/ui.html`
-5. Copies `manifest.json` from project root → `dist/manifest.json`
+3. Loads env files via `scripts/env.js` (CRA priority order), injects `POSTHOG_*` vars as `__VAR__` constants
+4. esbuild bundles `src/ui.tsx` → `dist/ui.js` + `dist/ui.css` (JSX via preact/jsx-runtime)
+5. Inlines `dist/ui.js` and `dist/ui.css` into `dist/ui.html`
+6. Calls `manifest.js(env)` and writes the result to `dist/manifest.json` (injects `PLUGIN_NAME` → `name`, `POSTHOG_HOST` → `networkAccess.allowedDomains`)
 
-**`manifest.json`** lives at the project root with dist-relative paths (`"main": "code.js"`, `"ui": "ui.html"`). It is copied to `dist/` during build — do not edit `dist/manifest.json` directly.
+**`manifest.js`** at the project root is the source of truth for the manifest — it exports a factory `(env) => ({...})`. Do not edit `dist/manifest.json` directly.
 
 ## Expected Figma Page Structure
 
@@ -70,6 +89,14 @@ Frame processing is sequential (one at a time) to avoid overloading the Figma pl
 - Sections are created if they don't exist; frames are appended to existing creative sections (stacked vertically, or horizontally for GIF slides)
 - **New section positioning**: new siblings are placed after existing ones (channels/platforms stack vertically; creatives stack horizontally within a platform)
 - **Section fitting** (`fitSectionToChildren` in `code.ts`): works in local coordinates — shifts the section origin so content has `padding` space on all sides, compensates children's local positions to keep their absolute positions unchanged, then resizes. Uses local coords (not `absoluteBoundingBox`) to avoid stale values after `appendChild`.
+
+## Analytics (`src/analytics.ts`)
+
+PostHog EU, fire-and-forget via fetch. Key and host injected at build time — not hardcoded in source.
+
+**Note:** Figma plugin UI runs in a `data:` URL iframe — `localStorage` is blocked. The `distinct_id` is a session-scoped random ID (regenerated each plugin open).
+
+Tracked events: `plugin_opened`, `export_started`, `export_completed`, `export_cancelled`, `export_error`.
 
 ## Key Dependencies
 

@@ -13,8 +13,7 @@ Thumbs.db
 *.swp
 *.swo
 
-# Env
-.env
+# Env (committed: .env, .env.development, .env.production, .env.test)
 .env.local
 .env.*.local
 

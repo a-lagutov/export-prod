@@ -4,6 +4,45 @@ const path = require('path')
 
 const root = path.resolve(__dirname, '..')
 
+// Load env files in CRA priority order (left = higher priority):
+//   build:  .env.production.local > .env.local > .env.production > .env
+//   watch:  .env.development.local > .env.local > .env.development > .env
+//   test:   .env.test.local > .env.test > .env  (.env.local is skipped)
+function loadEnv(mode) {
+  const isTest = mode === 'test'
+  const candidates = [
+    `.env.${mode}.local`,
+    ...(!isTest ? ['.env.local'] : []),
+    `.env.${mode}`,
+    '.env',
+  ]
+  const result = {}
+  // Lowest priority first, higher priority overwrites
+  for (const file of [...candidates].reverse()) {
+    const filePath = path.join(root, file)
+    if (!fs.existsSync(filePath)) continue
+    const lines = fs.readFileSync(filePath, 'utf-8').split('\n')
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) continue
+      const eq = trimmed.indexOf('=')
+      if (eq === -1) continue
+      const key = trimmed.slice(0, eq).trim()
+      const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '')
+      result[key] = val
+    }
+  }
+  return result
+}
+
+const mode = process.env.NODE_ENV || 'production'
+const env = loadEnv(mode)
+
+// Inject POSTHOG_* vars as __VAR__ constants; always defined (empty string = analytics disabled)
+const envDefine = Object.fromEntries(
+  ['POSTHOG_KEY', 'POSTHOG_HOST'].map((k) => [`__${k}__`, JSON.stringify(env[k] ?? '')])
+)
+
 async function build() {
   // 1. Bundle code.ts → dist/code.js
   await esbuild.build({
@@ -40,6 +79,7 @@ async function build() {
     jsxImportSource: 'preact',
     define: {
       __GIF_WORKER_CONTENT__: JSON.stringify(gifWorkerContent),
+      ...envDefine,
     },
     loader: { '.css': 'css' },
     target: 'es2017',
@@ -67,8 +107,9 @@ ${cssTag}
   fs.writeFileSync(path.join(root, 'dist/ui.html'), html)
   console.log('✓ dist/ui.html')
 
-  // 5. Copy manifest.json from root → dist/manifest.json
-  fs.copyFileSync(path.join(root, 'manifest.json'), path.join(root, 'dist/manifest.json'))
+  // 5. Generate dist/manifest.json from manifest.js + env
+  const manifest = require('../manifest.js')(env)
+  fs.writeFileSync(path.join(root, 'dist/manifest.json'), JSON.stringify(manifest, null, 2))
   console.log('✓ dist/manifest.json')
 }
 

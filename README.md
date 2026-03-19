@@ -17,11 +17,27 @@ In Figma: **Plugins → Development → Import plugin from manifest** → select
 ### Development
 
 ```bash
-npm run watch   # Rebuild code.ts on changes
-npm run build   # Full build (code.ts + ui.tsx → dist/)
+npm run watch   # Rebuild code.ts on changes (NODE_ENV=development)
+npm run build   # Full build (code.ts + ui.tsx → dist/, NODE_ENV=production)
 ```
 
 > `watch` does not rebuild `ui.html`. When changing `src/ui.tsx`, use full `npm run build`.
+
+#### Environment variables
+
+Env files follow CRA priority order and are injected at build time.
+
+| Variable | File | Purpose |
+|---|---|---|
+| `POSTHOG_KEY` | `.env.production.local` (gitignored) | Analytics key |
+| `POSTHOG_HOST` | `.env` | Analytics host; also sets `networkAccess.allowedDomains` in `dist/manifest.json` |
+| `PLUGIN_NAME` | `.env` | Plugin display name in Figma; sets `name` in `dist/manifest.json` |
+
+Create `.env.production.local` with your PostHog key:
+
+```
+POSTHOG_KEY=phc_...
+```
 
 ### Figma Page Structure
 
@@ -119,9 +135,9 @@ Communication between threads via `postMessage` / `figma.ui.postMessage`.
 2. Reads `gif.worker.js` from `node_modules/gif.js/dist/` and passes content via esbuild `define` as `__GIF_WORKER_CONTENT__`
 3. esbuild: `src/ui.tsx` → `dist/ui.js` + `dist/ui.css` (JSX via preact/jsx-runtime)
 4. Inline JS and CSS into `dist/ui.html` (Figma doesn't resolve external files)
-5. Copy `manifest.json` from root → `dist/manifest.json`
+5. Calls `manifest.js(env)` and writes result to `dist/manifest.json` (env vars injected into `name` and `networkAccess.allowedDomains`)
 
-`manifest.json` is stored at the root with dist-level paths. Do not edit `dist/manifest.json` directly.
+`manifest.js` at the root is the source of truth for the manifest. Do not edit `dist/manifest.json` directly.
 
 ### Dependencies
 
@@ -149,11 +165,27 @@ Figma-плагин для пакетного экспорта фреймов в 
 ### Разработка
 
 ```bash
-npm run watch   # Пересборка code.ts при изменениях
-npm run build   # Полная сборка (code.ts + ui.tsx → dist/)
+npm run watch   # Пересборка code.ts при изменениях (NODE_ENV=development)
+npm run build   # Полная сборка (code.ts + ui.tsx → dist/, NODE_ENV=production)
 ```
 
 > `watch` не пересобирает `ui.html`. При изменении `src/ui.tsx` нужен полный `npm run build`.
+
+#### Переменные окружения
+
+Env-файлы загружаются в порядке приоритета (как в CRA) и инжектируются при сборке.
+
+| Переменная | Файл | Назначение |
+|---|---|---|
+| `POSTHOG_KEY` | `.env.production.local` (в gitignore) | Ключ аналитики |
+| `POSTHOG_HOST` | `.env` | Хост аналитики; также задаёт `networkAccess.allowedDomains` в `dist/manifest.json` |
+| `PLUGIN_NAME` | `.env` | Отображаемое имя плагина в Figma; задаёт `name` в `dist/manifest.json` |
+
+Создайте `.env.production.local` с вашим ключом PostHog:
+
+```
+POSTHOG_KEY=phc_...
+```
 
 ### Структура страницы в Figma
 
@@ -251,9 +283,9 @@ xxxx-yyy
 2. Читает `gif.worker.js` из `node_modules/gif.js/dist/` и передаёт содержимое через esbuild `define` как `__GIF_WORKER_CONTENT__`
 3. esbuild: `src/ui.tsx` → `dist/ui.js` + `dist/ui.css` (JSX через preact/jsx-runtime)
 4. Инлайн JS и CSS в `dist/ui.html` (Figma не резолвит внешние файлы)
-5. Копирует `manifest.json` из корня → `dist/manifest.json`
+5. Вызывает `manifest.js(env)` и записывает результат в `dist/manifest.json` (env-переменные подставляются в `name` и `networkAccess.allowedDomains`)
 
-`manifest.json` хранится в корне проекта с путями на уровне `dist/`. Не редактируйте `dist/manifest.json` напрямую.
+`manifest.js` в корне — источник истины для манифеста. Не редактируйте `dist/manifest.json` напрямую.
 
 ### Зависимости
 

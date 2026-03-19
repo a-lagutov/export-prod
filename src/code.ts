@@ -1,89 +1,89 @@
 // Export Prod — Figma plugin main thread
 import type { TreeNode, ExportItem, SectionFormat } from './types'
 
-const FORMATS = ['jpg', 'png', 'webp', 'gif'] as const;
+const FORMATS = ['jpg', 'png', 'webp', 'gif'] as const
 
 function isSection(node: SceneNode): node is SectionNode {
-  return node.type === 'SECTION';
+  return node.type === 'SECTION'
 }
 
 function isFrame(node: SceneNode): node is FrameNode {
-  return node.type === 'FRAME';
+  return node.type === 'FRAME'
 }
 
-function scanPage(): { tree: TreeNode[], items: ExportItem[] } {
-  const tree: TreeNode[] = [];
-  const items: ExportItem[] = [];
+function scanPage(): { tree: TreeNode[]; items: ExportItem[] } {
+  const tree: TreeNode[] = []
+  const items: ExportItem[] = []
 
   for (const topChild of figma.currentPage.children) {
-    if (!isSection(topChild)) continue;
-    const formatName = topChild.name.trim().toUpperCase();
-    const format = FORMATS.find(f => f === formatName.toLowerCase());
-    if (!format) continue;
+    if (!isSection(topChild)) continue
+    const formatName = topChild.name.trim().toUpperCase()
+    const format = FORMATS.find((f) => f === formatName.toLowerCase())
+    if (!format) continue
 
-    const formatTree: TreeNode = { name: topChild.name, type: 'format', children: [] };
+    const formatTree: TreeNode = { name: topChild.name, type: 'format', children: [] }
 
     for (const channelNode of topChild.children) {
-      if (!isSection(channelNode)) continue;
-      const channelTree: TreeNode = { name: channelNode.name, type: 'channel', children: [] };
+      if (!isSection(channelNode)) continue
+      const channelTree: TreeNode = { name: channelNode.name, type: 'channel', children: [] }
 
       for (const platformNode of channelNode.children) {
-        if (!isSection(platformNode)) continue;
-        const platformTree: TreeNode = { name: platformNode.name, type: 'platform', children: [] };
+        if (!isSection(platformNode)) continue
+        const platformTree: TreeNode = { name: platformNode.name, type: 'platform', children: [] }
 
         for (const creativeNode of platformNode.children) {
-          if (!isSection(creativeNode)) continue;
-          const creativeTree: TreeNode = { name: creativeNode.name, type: 'creative', children: [] };
+          if (!isSection(creativeNode)) continue
+          const creativeTree: TreeNode = { name: creativeNode.name, type: 'creative', children: [] }
 
-          const frames = creativeNode.children.filter(isFrame);
+          const frames = creativeNode.children.filter(isFrame)
 
           if (format === 'gif') {
             // Group frames by name + y position
-            const groups = new Map<string, FrameNode[]>();
+            const groups = new Map<string, FrameNode[]>()
             for (const frame of frames) {
-              const key = `${frame.name}_y${Math.round(frame.y)}`;
-              if (!groups.has(key)) groups.set(key, []);
-              groups.get(key)!.push(frame);
+              const key = `${frame.name}_y${Math.round(frame.y)}`
+              if (!groups.has(key)) groups.set(key, [])
+              groups.get(key)!.push(frame)
             }
 
-            const sizeCount = new Map<string, number>();
+            const sizeCount = new Map<string, number>()
             for (const [, groupFrames] of groups) {
               // Sort by x position (left to right)
-              groupFrames.sort((a, b) => a.x - b.x);
-              const w = groupFrames[0].width;
-              const h = groupFrames[0].height;
-              const sizeKey = `${w}x${h}`;
-              const count = (sizeCount.get(sizeKey) || 0) + 1;
-              sizeCount.set(sizeKey, count);
-              const suffix = count > 1 ? `_${count}` : '';
-              const fileName = `${sizeKey}${suffix}.gif`;
-              const path = `${topChild.name}/${channelNode.name}/${platformNode.name}/${creativeNode.name}/${fileName}`;
+              groupFrames.sort((a, b) => a.x - b.x)
+              const w = groupFrames[0].width
+              const h = groupFrames[0].height
+              const sizeKey = `${w}x${h}`
+              const count = (sizeCount.get(sizeKey) || 0) + 1
+              sizeCount.set(sizeKey, count)
+              const suffix = count > 1 ? `_${count}` : ''
+              const fileName = `${sizeKey}${suffix}.gif`
+              const path = `${topChild.name}/${channelNode.name}/${platformNode.name}/${creativeNode.name}/${fileName}`
 
               items.push({
                 path,
                 format: 'gif',
-                nodeIds: groupFrames.map(f => f.id),
+                nodeIds: groupFrames.map((f) => f.id),
                 platformName: platformNode.name,
                 width: w,
                 height: h,
-              });
+              })
 
               creativeTree.children!.push({
                 name: fileName,
                 type: 'frame',
                 size: `${w}x${h} (${groupFrames.length} frames)`,
-              });
+              })
             }
           } else {
-            const sizeCount = new Map<string, number>();
+            const sizeCount = new Map<string, number>()
             for (const frame of frames) {
-              const sizeKey = `${frame.width}x${frame.height}`;
-              const count = (sizeCount.get(sizeKey) || 0) + 1;
-              sizeCount.set(sizeKey, count);
-              const suffix = count > 1 ? `_${count}` : '';
-              const ext = format;
-              const fileName = `${sizeKey}${suffix}.${ext}`;
-              const path = `${topChild.name}/${channelNode.name}/${platformNode.name}/${creativeNode.name}/${fileName}`;
+              const sizeKey = `${frame.width}x${frame.height}`
+              const count = (sizeCount.get(sizeKey) || 0) + 1
+              sizeCount.set(sizeKey, count)
+              const suffix = count > 1 ? `_${count}` : ''
+              const ext = format
+              const fileName = `${sizeKey}${suffix}.${ext}`
+              const path = `${topChild.name}/${channelNode.name}/${platformNode.name}/${creativeNode.name}/${fileName}`
 
               items.push({
                 path,
@@ -92,34 +92,34 @@ function scanPage(): { tree: TreeNode[], items: ExportItem[] } {
                 platformName: platformNode.name,
                 width: frame.width,
                 height: frame.height,
-              });
+              })
 
               creativeTree.children!.push({
                 name: fileName,
                 type: 'frame',
                 size: sizeKey,
-              });
+              })
             }
           }
 
           if (creativeTree.children!.length > 0) {
-            platformTree.children!.push(creativeTree);
+            platformTree.children!.push(creativeTree)
           }
         }
         if (platformTree.children!.length > 0) {
-          channelTree.children!.push(platformTree);
+          channelTree.children!.push(platformTree)
         }
       }
       if (channelTree.children!.length > 0) {
-        formatTree.children!.push(channelTree);
+        formatTree.children!.push(channelTree)
       }
     }
     if (formatTree.children!.length > 0) {
-      tree.push(formatTree);
+      tree.push(formatTree)
     }
   }
 
-  return { tree, items };
+  return { tree, items }
 }
 
 // Resize a section so its bounding box encompasses all its children + padding.
@@ -127,313 +127,321 @@ function scanPage(): { tree: TreeNode[], items: ExportItem[] } {
 // Shifts the section origin so content has `padding` space on all sides, compensating
 // children's local positions to keep their absolute positions unchanged.
 function fitSectionToChildren(section: SectionNode, padding = 40): void {
-  const children = section.children as SceneNode[];
-  if (children.length === 0) return;
+  const children = section.children as SceneNode[]
+  if (children.length === 0) return
 
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity
   for (const child of children) {
-    minX = Math.min(minX, child.x);
-    minY = Math.min(minY, child.y);
-    maxX = Math.max(maxX, child.x + child.width);
-    maxY = Math.max(maxY, child.y + child.height);
+    minX = Math.min(minX, child.x)
+    minY = Math.min(minY, child.y)
+    maxX = Math.max(maxX, child.x + child.width)
+    maxY = Math.max(maxY, child.y + child.height)
   }
-  if (!isFinite(minX)) return;
+  if (!isFinite(minX)) return
 
   // How much the section origin needs to shift so content starts at `padding`
-  const shiftX = minX - padding;
-  const shiftY = minY - padding;
+  const shiftX = minX - padding
+  const shiftY = minY - padding
 
   // Move the section in parent coords
-  section.x += shiftX;
-  section.y += shiftY;
+  section.x += shiftX
+  section.y += shiftY
 
   // Compensate children so their absolute positions don't change
   for (const child of children) {
-    child.x -= shiftX;
-    child.y -= shiftY;
+    child.x -= shiftX
+    child.y -= shiftY
   }
 
-  const newW = Math.max(1, maxX - minX + 2 * padding);
-  const newH = Math.max(1, maxY - minY + 2 * padding);
+  const newW = Math.max(1, maxX - minX + 2 * padding)
+  const newH = Math.max(1, maxY - minY + 2 * padding)
   try {
-    section.resizeWithoutConstraints(newW, newH);
+    section.resizeWithoutConstraints(newW, newH)
   } catch {
-    (section as unknown as { resize(w: number, h: number): void }).resize(newW, newH);
+    ;(section as unknown as { resize(w: number, h: number): void }).resize(newW, newH)
   }
 }
 
 function setSectionFill(section: SectionNode, opacity: number): void {
-  section.fills = [{ type: 'SOLID', color: { r: 68 / 255, g: 68 / 255, b: 68 / 255 }, opacity }];
+  section.fills = [{ type: 'SOLID', color: { r: 68 / 255, g: 68 / 255, b: 68 / 255 }, opacity }]
 }
 
 function getAllSections(): SectionFormat[] {
-  const formats: SectionFormat[] = [];
+  const formats: SectionFormat[] = []
 
   for (const topChild of figma.currentPage.children) {
-    if (!isSection(topChild)) continue;
-    const formatLower = topChild.name.trim().toLowerCase();
-    if (!FORMATS.find(f => f === formatLower)) continue;
+    if (!isSection(topChild)) continue
+    const formatLower = topChild.name.trim().toLowerCase()
+    if (!FORMATS.find((f) => f === formatLower)) continue
 
-    const channels = [];
+    const channels = []
     for (const ch of topChild.children) {
-      if (!isSection(ch)) continue;
-      const platforms = [];
+      if (!isSection(ch)) continue
+      const platforms = []
       for (const pl of ch.children) {
-        if (!isSection(pl)) continue;
-        const creatives: string[] = [];
+        if (!isSection(pl)) continue
+        const creatives: string[] = []
         for (const cr of pl.children) {
-          if (!isSection(cr)) continue;
-          creatives.push(cr.name);
+          if (!isSection(cr)) continue
+          creatives.push(cr.name)
         }
-        platforms.push({ name: pl.name, creatives });
+        platforms.push({ name: pl.name, creatives })
       }
-      channels.push({ name: ch.name, platforms });
+      channels.push({ name: ch.name, platforms })
     }
-    formats.push({ name: topChild.name.trim(), channels });
+    formats.push({ name: topChild.name.trim(), channels })
   }
 
-  return formats;
+  return formats
 }
 
-let exportItems: ExportItem[] = [];
+let exportItems: ExportItem[] = []
 
-figma.showUI(__html__, { width: 400, height: 560, themeColors: true });
+figma.showUI(__html__, { width: 400, height: 560, themeColors: true })
 
 // Auto-scan on plugin open
 {
-  const result = scanPage();
-  exportItems = result.items;
-  figma.ui.postMessage({ type: 'scan-result', tree: result.tree, items: result.items });
+  const result = scanPage()
+  exportItems = result.items
+  figma.ui.postMessage({ type: 'scan-result', tree: result.tree, items: result.items })
 }
 
 // Re-scan when page selection changes
 figma.on('currentpagechange', () => {
-  const result = scanPage();
-  exportItems = result.items;
-  figma.ui.postMessage({ type: 'scan-result', tree: result.tree, items: result.items });
-});
+  const result = scanPage()
+  exportItems = result.items
+  figma.ui.postMessage({ type: 'scan-result', tree: result.tree, items: result.items })
+})
 
 figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
   if (msg.type === 'scan') {
-    const result = scanPage();
-    exportItems = result.items;
-    figma.ui.postMessage({ type: 'scan-result', tree: result.tree, items: result.items });
+    const result = scanPage()
+    exportItems = result.items
+    figma.ui.postMessage({ type: 'scan-result', tree: result.tree, items: result.items })
   }
 
   if (msg.type === 'resize') {
-    const h = msg.height as number;
-    figma.ui.resize(400, Math.max(200, h));
+    const h = msg.height as number
+    figma.ui.resize(400, Math.max(200, h))
   }
 
   if (msg.type === 'get-sections') {
-    figma.ui.postMessage({ type: 'sections-data', sections: getAllSections() });
-    const frames = figma.currentPage.selection.filter(isFrame);
-    figma.ui.postMessage({ type: 'selection-change', count: frames.length });
+    figma.ui.postMessage({ type: 'sections-data', sections: getAllSections() })
+    const frames = figma.currentPage.selection.filter(isFrame)
+    figma.ui.postMessage({ type: 'selection-change', count: frames.length })
   }
 
   if (msg.type === 'place-frames') {
-    const formatName = msg.formatName as string;
-    const channelName = msg.channelName as string;
-    const platformName = msg.platformName as string;
-    const creativeName = msg.creativeName as string;
+    const formatName = msg.formatName as string
+    const channelName = msg.channelName as string
+    const platformName = msg.platformName as string
+    const creativeName = msg.creativeName as string
 
-    const selectedFrames = figma.currentPage.selection.filter(isFrame);
+    const selectedFrames = figma.currentPage.selection.filter(isFrame)
 
     if (selectedFrames.length === 0) {
-      figma.ui.postMessage({ type: 'place-result', success: false, message: 'Нет выбранных фреймов' });
-      return;
+      figma.ui.postMessage({
+        type: 'place-result',
+        success: false,
+        message: 'Нет выбранных фреймов',
+      })
+      return
     }
 
-    const page = figma.currentPage;
-    const normalizedFormat = formatName.toUpperCase();
-    const PLACE_PADDING = 250;
-    const FRAME_GAP = 250;
-    const GIF_SLIDE_GAP = 50;
+    const page = figma.currentPage
+    const normalizedFormat = formatName.toUpperCase()
+    const PLACE_PADDING = 250
+    const FRAME_GAP = 250
+    const GIF_SLIDE_GAP = 50
 
     // Find or create format section
     let formatSection = page.children.find(
-      (n): n is SectionNode => isSection(n) && n.name.toLowerCase() === formatName.toLowerCase()
-    );
+      (n): n is SectionNode => isSection(n) && n.name.toLowerCase() === formatName.toLowerCase(),
+    )
     if (!formatSection) {
-      formatSection = figma.createSection();
-      formatSection.name = normalizedFormat;
+      formatSection = figma.createSection()
+      formatSection.name = normalizedFormat
     }
-    setSectionFill(formatSection, 0.2);
+    setSectionFill(formatSection, 0.2)
 
     // Find or create channel section
     let channelSection = formatSection.children.find(
-      (n): n is SectionNode => isSection(n) && n.name === channelName
-    );
+      (n): n is SectionNode => isSection(n) && n.name === channelName,
+    )
     if (!channelSection) {
-      channelSection = figma.createSection();
-      channelSection.name = channelName;
-      formatSection.appendChild(channelSection);
+      channelSection = figma.createSection()
+      channelSection.name = channelName
+      formatSection.appendChild(channelSection)
       const chSiblings = formatSection.children.filter(
-        (n): n is SectionNode => isSection(n) && n !== channelSection
-      );
+        (n): n is SectionNode => isSection(n) && n !== channelSection,
+      )
       if (chSiblings.length > 0) {
-        channelSection.x = Math.min(...chSiblings.map(s => s.x));
-        channelSection.y = Math.max(...chSiblings.map(s => s.y + s.height)) + FRAME_GAP;
+        channelSection.x = Math.min(...chSiblings.map((s) => s.x))
+        channelSection.y = Math.max(...chSiblings.map((s) => s.y + s.height)) + FRAME_GAP
       } else {
-        channelSection.x = PLACE_PADDING;
-        channelSection.y = PLACE_PADDING;
+        channelSection.x = PLACE_PADDING
+        channelSection.y = PLACE_PADDING
       }
     }
-    setSectionFill(channelSection, 0.4);
+    setSectionFill(channelSection, 0.4)
 
     // Find or create platform section
     let platformSection = channelSection.children.find(
-      (n): n is SectionNode => isSection(n) && n.name === platformName
-    );
+      (n): n is SectionNode => isSection(n) && n.name === platformName,
+    )
     if (!platformSection) {
-      platformSection = figma.createSection();
-      platformSection.name = platformName;
-      channelSection.appendChild(platformSection);
+      platformSection = figma.createSection()
+      platformSection.name = platformName
+      channelSection.appendChild(platformSection)
       const plSiblings = channelSection.children.filter(
-        (n): n is SectionNode => isSection(n) && n !== platformSection
-      );
+        (n): n is SectionNode => isSection(n) && n !== platformSection,
+      )
       if (plSiblings.length > 0) {
-        platformSection.x = Math.min(...plSiblings.map(s => s.x));
-        platformSection.y = Math.max(...plSiblings.map(s => s.y + s.height)) + FRAME_GAP;
+        platformSection.x = Math.min(...plSiblings.map((s) => s.x))
+        platformSection.y = Math.max(...plSiblings.map((s) => s.y + s.height)) + FRAME_GAP
       } else {
-        platformSection.x = PLACE_PADDING;
-        platformSection.y = PLACE_PADDING;
+        platformSection.x = PLACE_PADDING
+        platformSection.y = PLACE_PADDING
       }
     }
-    setSectionFill(platformSection, 0.6);
+    setSectionFill(platformSection, 0.6)
 
     // Find or create creative section
     let creativeSection = platformSection.children.find(
-      (n): n is SectionNode => isSection(n) && n.name === creativeName
-    );
+      (n): n is SectionNode => isSection(n) && n.name === creativeName,
+    )
     if (!creativeSection) {
-      creativeSection = figma.createSection();
-      creativeSection.name = creativeName;
-      platformSection.appendChild(creativeSection);
+      creativeSection = figma.createSection()
+      creativeSection.name = creativeName
+      platformSection.appendChild(creativeSection)
       const crSiblings = platformSection.children.filter(
-        (n): n is SectionNode => isSection(n) && n !== creativeSection
-      );
+        (n): n is SectionNode => isSection(n) && n !== creativeSection,
+      )
       if (crSiblings.length > 0) {
-        creativeSection.x = Math.max(...crSiblings.map(s => s.x + s.width)) + FRAME_GAP;
-        creativeSection.y = Math.min(...crSiblings.map(s => s.y));
+        creativeSection.x = Math.max(...crSiblings.map((s) => s.x + s.width)) + FRAME_GAP
+        creativeSection.y = Math.min(...crSiblings.map((s) => s.y))
       } else {
-        creativeSection.x = PLACE_PADDING;
-        creativeSection.y = PLACE_PADDING;
+        creativeSection.x = PLACE_PADDING
+        creativeSection.y = PLACE_PADDING
       }
     }
-    setSectionFill(creativeSection, 0.8);
+    setSectionFill(creativeSection, 0.8)
 
     // Find bottom of existing frames in creative section (local coords)
-    const existingFrames = creativeSection.children.filter(isFrame) as FrameNode[];
-    let nextY = existingFrames.length > 0
-      ? Math.max(...existingFrames.map(f => f.y + f.height)) + FRAME_GAP
-      : PLACE_PADDING;
+    const existingFrames = creativeSection.children.filter(isFrame) as FrameNode[]
+    let nextY =
+      existingFrames.length > 0
+        ? Math.max(...existingFrames.map((f) => f.y + f.height)) + FRAME_GAP
+        : PLACE_PADDING
 
     // Place frames: vertically stacked; for GIF — group by name+y, slides horizontal
     if (formatName.toLowerCase() === 'gif') {
-      const groups = new Map<string, FrameNode[]>();
+      const groups = new Map<string, FrameNode[]>()
       for (const frame of selectedFrames) {
-        const key = `${frame.name}_y${Math.round(frame.y)}`;
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key)!.push(frame);
+        const key = `${frame.name}_y${Math.round(frame.y)}`
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key)!.push(frame)
       }
       for (const [, groupFrames] of groups) {
-        groupFrames.sort((a, b) => a.x - b.x);
-        let groupNextX = PLACE_PADDING;
+        groupFrames.sort((a, b) => a.x - b.x)
+        let groupNextX = PLACE_PADDING
         for (const frame of groupFrames) {
-          creativeSection.appendChild(frame);
-          frame.x = groupNextX;
-          frame.y = nextY;
-          groupNextX += frame.width + GIF_SLIDE_GAP;
+          creativeSection.appendChild(frame)
+          frame.x = groupNextX
+          frame.y = nextY
+          groupNextX += frame.width + GIF_SLIDE_GAP
         }
-        nextY += Math.max(...groupFrames.map(f => f.height)) + FRAME_GAP;
+        nextY += Math.max(...groupFrames.map((f) => f.height)) + FRAME_GAP
       }
     } else {
       for (const frame of selectedFrames) {
-        creativeSection.appendChild(frame);
-        frame.x = PLACE_PADDING;
-        frame.y = nextY;
-        nextY += frame.height + FRAME_GAP;
+        creativeSection.appendChild(frame)
+        frame.x = PLACE_PADDING
+        frame.y = nextY
+        nextY += frame.height + FRAME_GAP
       }
     }
 
     // Resize sections bottom-up with 250px padding
-    fitSectionToChildren(creativeSection, PLACE_PADDING);
-    fitSectionToChildren(platformSection, PLACE_PADDING);
-    fitSectionToChildren(channelSection, PLACE_PADDING);
-    fitSectionToChildren(formatSection, PLACE_PADDING);
+    fitSectionToChildren(creativeSection, PLACE_PADDING)
+    fitSectionToChildren(platformSection, PLACE_PADDING)
+    fitSectionToChildren(channelSection, PLACE_PADDING)
+    fitSectionToChildren(formatSection, PLACE_PADDING)
 
     // Scroll viewport to show the result
-    figma.viewport.scrollAndZoomIntoView([creativeSection]);
+    figma.viewport.scrollAndZoomIntoView([creativeSection])
 
-    const count = selectedFrames.length;
+    const count = selectedFrames.length
     figma.ui.postMessage({
       type: 'place-result',
       success: true,
       message: `${count} ${count === 1 ? 'фрейм помещён' : count < 5 ? 'фрейма помещено' : 'фреймов помещено'} в ${normalizedFormat} / ${channelName} / ${platformName} / ${creativeName}`,
-    });
+    })
 
     // Update both tabs
-    figma.ui.postMessage({ type: 'sections-data', sections: getAllSections() });
-    const result = scanPage();
-    exportItems = result.items;
-    figma.ui.postMessage({ type: 'scan-result', tree: result.tree, items: result.items });
+    figma.ui.postMessage({ type: 'sections-data', sections: getAllSections() })
+    const result = scanPage()
+    exportItems = result.items
+    figma.ui.postMessage({ type: 'scan-result', tree: result.tree, items: result.items })
   }
 
   if (msg.type === 'rename-frames') {
     // Rename all frames to their dimensions (e.g. "1080x1920")
     for (const item of exportItems) {
       for (const nodeId of item.nodeIds) {
-        const node = await figma.getNodeByIdAsync(nodeId);
-        if (node && (node.type === 'FRAME')) {
-          const frameName = `${(node as FrameNode).width}x${(node as FrameNode).height}`;
-          node.name = frameName;
+        const node = await figma.getNodeByIdAsync(nodeId)
+        if (node && node.type === 'FRAME') {
+          const frameName = `${(node as FrameNode).width}x${(node as FrameNode).height}`
+          node.name = frameName
         }
       }
     }
     // Re-scan to update tree with new names
-    const result = scanPage();
-    exportItems = result.items;
-    figma.ui.postMessage({ type: 'scan-result', tree: result.tree, items: result.items });
-    figma.ui.postMessage({ type: 'rename-done' });
+    const result = scanPage()
+    exportItems = result.items
+    figma.ui.postMessage({ type: 'scan-result', tree: result.tree, items: result.items })
+    figma.ui.postMessage({ type: 'rename-done' })
   }
 
   if (msg.type === 'start-export') {
     // Send first frame
     if (exportItems.length > 0) {
-      await sendFrame(0);
+      await sendFrame(0)
     } else {
-      figma.ui.postMessage({ type: 'export-complete' });
+      figma.ui.postMessage({ type: 'export-complete' })
     }
   }
 
   if (msg.type === 'request-frame') {
-    const index = msg.index as number;
+    const index = msg.index as number
     if (index < exportItems.length) {
-      await sendFrame(index);
+      await sendFrame(index)
     } else {
-      figma.ui.postMessage({ type: 'export-complete' });
+      figma.ui.postMessage({ type: 'export-complete' })
     }
   }
-};
+}
 
 figma.on('selectionchange', () => {
-  const frames = figma.currentPage.selection.filter(isFrame);
-  figma.ui.postMessage({ type: 'selection-change', count: frames.length });
-});
+  const frames = figma.currentPage.selection.filter(isFrame)
+  figma.ui.postMessage({ type: 'selection-change', count: frames.length })
+})
 
 async function sendFrame(index: number) {
-  const item = exportItems[index];
-  const total = exportItems.length;
-  const exportSettings: ExportSettings = { format: 'PNG', constraint: { type: 'SCALE', value: 1 } };
+  const item = exportItems[index]
+  const total = exportItems.length
+  const exportSettings: ExportSettings = { format: 'PNG', constraint: { type: 'SCALE', value: 1 } }
 
   if (item.format === 'gif') {
     // Export all gif frames
-    const framesData: Uint8Array[] = [];
+    const framesData: Uint8Array[] = []
     for (const nodeId of item.nodeIds) {
-      const node = (await figma.getNodeByIdAsync(nodeId)) as FrameNode;
-      const bytes = await node.exportAsync(exportSettings);
-      framesData.push(bytes);
+      const node = (await figma.getNodeByIdAsync(nodeId)) as FrameNode
+      const bytes = await node.exportAsync(exportSettings)
+      framesData.push(bytes)
     }
     figma.ui.postMessage({
       type: 'gif-data',
@@ -444,10 +452,10 @@ async function sendFrame(index: number) {
       platformName: item.platformName,
       width: item.width,
       height: item.height,
-    });
+    })
   } else {
-    const node = (await figma.getNodeByIdAsync(item.nodeIds[0])) as FrameNode;
-    const pngBytes = await node.exportAsync(exportSettings);
+    const node = (await figma.getNodeByIdAsync(item.nodeIds[0])) as FrameNode
+    const pngBytes = await node.exportAsync(exportSettings)
     figma.ui.postMessage({
       type: 'frame-data',
       index,
@@ -458,6 +466,6 @@ async function sendFrame(index: number) {
       platformName: item.platformName,
       width: item.width,
       height: item.height,
-    });
+    })
   }
 }

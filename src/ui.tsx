@@ -5,6 +5,7 @@ import { Button, Text, Muted, VerticalSpace, Divider } from '@create-figma-plugi
 import type { TreeNode, ExportItem, SectionFormat } from './types'
 import JSZip from 'jszip'
 import GIF from 'gif.js'
+import { track } from './analytics'
 
 // gif.worker.js content injected at build time via esbuild define
 declare const __GIF_WORKER_CONTENT__: string
@@ -814,6 +815,8 @@ function App() {
   const cancelledRef = useRef(false)
   const exportedFilesRef = useRef<string[]>([])
   const zipRef = useRef<JSZip | null>(null)
+  const exportStartTimeRef = useRef<number>(0)
+  const openTrackedRef = useRef(false)
 
   useEffect(() => {
     itemsRef.current = items
@@ -859,6 +862,10 @@ function App() {
         setTree(newTree)
         setItems(newItems)
         itemsRef.current = newItems
+        if (!openTrackedRef.current) {
+          openTrackedRef.current = true
+          track('plugin_opened', { frame_count: newItems.length, has_frames: newItems.length > 0 })
+        }
         setPhase((prev) =>
           prev === 'exporting' || prev === 'done' ? prev : newTree.length > 0 ? 'ready' : 'empty',
         )
@@ -888,6 +895,7 @@ function App() {
           exportedFilesRef.current.push(zPath)
         } catch (e) {
           console.error('Error converting', path, e)
+          track('export_error', { format, error: String(e) })
         }
         if (!cancelledRef.current) {
           parent.postMessage({ pluginMessage: { type: 'request-frame', index: index + 1 } }, '*')
@@ -918,6 +926,7 @@ function App() {
           exportedFilesRef.current.push(zPath)
         } catch (e) {
           console.error('Error assembling GIF', path, e)
+          track('export_error', { format: 'gif', error: String(e) })
         }
         if (!cancelledRef.current) {
           parent.postMessage({ pluginMessage: { type: 'request-frame', index: index + 1 } }, '*')
@@ -934,6 +943,11 @@ function App() {
             current: p.total,
             text: `Готово! Размер: ${(blob.size / 1024 / 1024).toFixed(2)} МБ`,
           }))
+          track('export_completed', {
+            frame_count: itemsRef.current.length,
+            duration_ms: Date.now() - exportStartTimeRef.current,
+            zip_size_mb: parseFloat((blob.size / 1024 / 1024).toFixed(2)),
+          })
         })
       }
     }
@@ -951,14 +965,21 @@ function App() {
   function handleExport() {
     zipRef.current = new JSZip()
     exportedFilesRef.current = []
+    exportStartTimeRef.current = Date.now()
     setZipBlob(null)
     setPhase('exporting')
     setProgress({ current: 0, total: items.length, text: 'Переименование фреймов...' })
+    track('export_started', { frame_count: items.length })
     // Rename frames to their dimensions, then start export
     parent.postMessage({ pluginMessage: { type: 'rename-frames' } }, '*')
   }
 
   function handleCancel() {
+    track('export_cancelled', {
+      frame_count: itemsRef.current.length,
+      completed: progress.current,
+      duration_ms: Date.now() - exportStartTimeRef.current,
+    })
     cancelledRef.current = true
     setPhase('ready')
     setProgress({ current: 0, total: 0, text: '' })
@@ -1272,14 +1293,9 @@ function TabBar({
             padding: '8px 12px',
             border: 'none',
             borderBottom:
-              active === key
-                ? '2px solid var(--figma-color-bg-brand)'
-                : '2px solid transparent',
+              active === key ? '2px solid var(--figma-color-bg-brand)' : '2px solid transparent',
             background: 'transparent',
-            color:
-              active === key
-                ? 'var(--figma-color-text)'
-                : 'var(--figma-color-text-secondary)',
+            color: active === key ? 'var(--figma-color-text)' : 'var(--figma-color-text-secondary)',
             fontSize: 12,
             fontWeight: active === key ? 600 : 400,
             cursor: 'pointer',
@@ -1322,9 +1338,18 @@ function ComboboxDropdown({
         <div
           key={o}
           onMouseDown={() => onSelect(o)}
-          style={{ padding: '6px 8px', fontSize: 11, cursor: 'pointer', color: 'var(--figma-color-text)' }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = 'var(--figma-color-bg-hover)')}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = 'transparent')}
+          style={{
+            padding: '6px 8px',
+            fontSize: 11,
+            cursor: 'pointer',
+            color: 'var(--figma-color-text)',
+          }}
+          onMouseEnter={(e) =>
+            ((e.currentTarget as HTMLDivElement).style.background = 'var(--figma-color-bg-hover)')
+          }
+          onMouseLeave={(e) =>
+            ((e.currentTarget as HTMLDivElement).style.background = 'transparent')
+          }
         >
           {o}
         </div>
@@ -1353,7 +1378,14 @@ function PathField({
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <span style={{ width: 72, fontSize: 11, color: 'var(--figma-color-text-secondary)', flexShrink: 0 }}>
+      <span
+        style={{
+          width: 72,
+          fontSize: 11,
+          color: 'var(--figma-color-text-secondary)',
+          flexShrink: 0,
+        }}
+      >
         {label}
       </span>
       <div style={{ flex: 1, position: 'relative' }}>
@@ -1377,7 +1409,13 @@ function PathField({
           }}
         />
         {open && filtered.length > 0 && (
-          <ComboboxDropdown options={filtered} onSelect={(o) => { onChange(o); setOpen(false) }} />
+          <ComboboxDropdown
+            options={filtered}
+            onSelect={(o) => {
+              onChange(o)
+              setOpen(false)
+            }}
+          />
         )}
       </div>
     </div>
@@ -1460,10 +1498,28 @@ function PathInput({
       />
       {/* Segment hint */}
       {parts.length < 5 && (
-        <div style={{ marginTop: 3, fontSize: 10, color: 'var(--figma-color-text-tertiary)', display: 'flex', gap: 4 }}>
+        <div
+          style={{
+            marginTop: 3,
+            fontSize: 10,
+            color: 'var(--figma-color-text-tertiary)',
+            display: 'flex',
+            gap: 4,
+          }}
+        >
           {['Формат', 'Канал', 'Площадка', 'Креатив'].map((label, i) => (
-            <span key={label} style={{ fontWeight: i === parts.length - 1 ? 600 : 400, color: i === parts.length - 1 ? 'var(--figma-color-text-brand)' : 'var(--figma-color-text-tertiary)' }}>
-              {i > 0 && '/ '}{label}
+            <span
+              key={label}
+              style={{
+                fontWeight: i === parts.length - 1 ? 600 : 400,
+                color:
+                  i === parts.length - 1
+                    ? 'var(--figma-color-text-brand)'
+                    : 'var(--figma-color-text-tertiary)',
+              }}
+            >
+              {i > 0 && '/ '}
+              {label}
             </span>
           ))}
         </div>
@@ -1531,7 +1587,15 @@ function OrganizePage() {
   function doPlace(fmt: string, ch: string, pl: string, cr: string) {
     setResult(null)
     parent.postMessage(
-      { pluginMessage: { type: 'place-frames', formatName: fmt, channelName: ch, platformName: pl, creativeName: cr } },
+      {
+        pluginMessage: {
+          type: 'place-frames',
+          formatName: fmt,
+          channelName: ch,
+          platformName: pl,
+          creativeName: cr,
+        },
+      },
       '*',
     )
   }
@@ -1544,10 +1608,14 @@ function OrganizePage() {
           style={{
             flex: 1,
             padding: '7px 10px',
-            background: selectedCount > 0 ? 'var(--figma-color-bg-brand)' : 'var(--figma-color-bg-secondary)',
+            background:
+              selectedCount > 0 ? 'var(--figma-color-bg-brand)' : 'var(--figma-color-bg-secondary)',
             borderRadius: 6,
             fontSize: 11,
-            color: selectedCount > 0 ? 'var(--figma-color-text-onbrand)' : 'var(--figma-color-text-secondary)',
+            color:
+              selectedCount > 0
+                ? 'var(--figma-color-text-onbrand)'
+                : 'var(--figma-color-text-secondary)',
           }}
         >
           {selectedCount > 0
@@ -1556,7 +1624,13 @@ function OrganizePage() {
         </div>
         <span
           onClick={() => parent.postMessage({ pluginMessage: { type: 'get-sections' } }, '*')}
-          style={{ cursor: 'pointer', fontSize: 11, color: 'var(--figma-color-text-brand)', userSelect: 'none', flexShrink: 0 }}
+          style={{
+            cursor: 'pointer',
+            fontSize: 11,
+            color: 'var(--figma-color-text-brand)',
+            userSelect: 'none',
+            flexShrink: 0,
+          }}
         >
           Обновить
         </span>
@@ -1579,21 +1653,33 @@ function OrganizePage() {
           <PathField
             label="Формат"
             value={format}
-            onChange={(v) => { setFormat(v); setChannel(''); setPlatform(''); setCreative('') }}
+            onChange={(v) => {
+              setFormat(v)
+              setChannel('')
+              setPlatform('')
+              setCreative('')
+            }}
             options={['JPG', 'PNG', 'WEBP', 'GIF']}
             placeholder="JPG, PNG, WEBP или GIF"
           />
           <PathField
             label="Канал"
             value={channel}
-            onChange={(v) => { setChannel(v); setPlatform(''); setCreative('') }}
+            onChange={(v) => {
+              setChannel(v)
+              setPlatform('')
+              setCreative('')
+            }}
             options={channelOptions}
             placeholder="например: 5_Context_Media"
           />
           <PathField
             label="Площадка"
             value={platform}
-            onChange={(v) => { setPlatform(v); setCreative('') }}
+            onChange={(v) => {
+              setPlatform(v)
+              setCreative('')
+            }}
             options={platformOptions}
             placeholder="например: VK, TG, Bigo"
           />
@@ -1621,7 +1707,15 @@ function OrganizePage() {
       {result && (
         <Fragment>
           <VerticalSpace space="extraSmall" />
-          <div style={{ padding: '7px 10px', background: result.success ? '#d4edda' : '#f8d7da', borderRadius: 6, fontSize: 11, color: result.success ? '#155724' : '#721c24' }}>
+          <div
+            style={{
+              padding: '7px 10px',
+              background: result.success ? '#d4edda' : '#f8d7da',
+              borderRadius: 6,
+              fontSize: 11,
+              color: result.success ? '#155724' : '#721c24',
+            }}
+          >
             {result.message}
           </div>
         </Fragment>
@@ -1656,7 +1750,12 @@ function SectionTreePanel({
       <VerticalSpace space="extraSmall" />
       <SearchInput value={query} onChange={setQuery} />
       <VerticalSpace space="extraSmall" />
-      <SectionTree sections={sections} searchQuery={query} onPlace={onPlace} selectedCount={selectedCount} />
+      <SectionTree
+        sections={sections}
+        searchQuery={query}
+        onPlace={onPlace}
+        selectedCount={selectedCount}
+      />
     </Fragment>
   )
 }
@@ -1690,7 +1789,10 @@ function SectionTree({
     >
       {sections.map((fmt) => {
         const visibleChannels = fmt.channels.filter(
-          (ch) => matches(fmt.name) || matches(ch.name) || ch.platforms.some((pl) => matches(pl.name) || pl.creatives.some(matches)),
+          (ch) =>
+            matches(fmt.name) ||
+            matches(ch.name) ||
+            ch.platforms.some((pl) => matches(pl.name) || pl.creatives.some(matches)),
         )
         if (visibleChannels.length === 0 && !matches(fmt.name)) return null
         return (
@@ -1726,9 +1828,28 @@ function SectionFormatNode({
     <div>
       <div
         onClick={() => setCollapsed(!collapsed)}
-        style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', cursor: 'pointer', userSelect: 'none', fontWeight: 600 }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          padding: '4px 8px',
+          cursor: 'pointer',
+          userSelect: 'none',
+          fontWeight: 600,
+        }}
       >
-        <span style={{ fontSize: 8, color: 'var(--figma-color-text-tertiary)', transform: collapsed ? 'rotate(-90deg)' : 'none', display: 'inline-block', width: 10, transition: 'transform 0.12s' }}>▼</span>
+        <span
+          style={{
+            fontSize: 8,
+            color: 'var(--figma-color-text-tertiary)',
+            transform: collapsed ? 'rotate(-90deg)' : 'none',
+            display: 'inline-block',
+            width: 10,
+            transition: 'transform 0.12s',
+          }}
+        >
+          ▼
+        </span>
         <TagBadge format={fmt.name.toLowerCase()} />
         <span style={{ marginLeft: 2 }}>{fmt.name}</span>
       </div>
@@ -1765,9 +1886,27 @@ function SectionChannelNode({
     <div style={{ paddingLeft: 14 }}>
       <div
         onClick={() => setCollapsed(!collapsed)}
-        style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px 3px 0', cursor: 'pointer', userSelect: 'none' }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          padding: '3px 8px 3px 0',
+          cursor: 'pointer',
+          userSelect: 'none',
+        }}
       >
-        <span style={{ fontSize: 8, color: 'var(--figma-color-text-tertiary)', transform: collapsed ? 'rotate(-90deg)' : 'none', display: 'inline-block', width: 10, transition: 'transform 0.12s' }}>▼</span>
+        <span
+          style={{
+            fontSize: 8,
+            color: 'var(--figma-color-text-tertiary)',
+            transform: collapsed ? 'rotate(-90deg)' : 'none',
+            display: 'inline-block',
+            width: 10,
+            transition: 'transform 0.12s',
+          }}
+        >
+          ▼
+        </span>
         <span style={{ color: 'var(--figma-color-text)' }}>{ch.name}</span>
       </div>
       {!collapsed &&
@@ -1778,7 +1917,14 @@ function SectionChannelNode({
           if (visibleCreatives.length === 0 && !matches(pl.name)) return null
           return (
             <div key={pl.name} style={{ paddingLeft: 14 }}>
-              <div style={{ padding: '2px 0', color: 'var(--figma-color-text-secondary)', fontStyle: 'italic', fontSize: 10 }}>
+              <div
+                style={{
+                  padding: '2px 0',
+                  color: 'var(--figma-color-text-secondary)',
+                  fontStyle: 'italic',
+                  fontSize: 10,
+                }}
+              >
                 {pl.name}
               </div>
               {visibleCreatives.map((cr) => (
@@ -1818,9 +1964,16 @@ function CreativeRow({
         background: hovered ? 'var(--figma-color-bg-hover)' : 'transparent',
       }}
     >
-      <span style={{ flex: 1, color: 'var(--figma-color-text-tertiary)', fontSize: 10, paddingLeft: 2 }}>{name}</span>
+      <span
+        style={{ flex: 1, color: 'var(--figma-color-text-tertiary)', fontSize: 10, paddingLeft: 2 }}
+      >
+        {name}
+      </span>
       <button
-        onClick={(e) => { e.stopPropagation(); if (enabled) onAdd() }}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (enabled) onAdd()
+        }}
         title={enabled ? 'Добавить выделенные фреймы' : 'Выделите фреймы на странице'}
         style={{
           width: 18,
