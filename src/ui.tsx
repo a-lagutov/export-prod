@@ -1,7 +1,7 @@
 import { Fragment } from 'preact'
 import { useState, useEffect, useRef, useMemo } from 'preact/hooks'
 import { render } from 'preact'
-import { Button, Text, Muted, VerticalSpace, Divider } from '@create-figma-plugin/ui'
+import { Button, Text, Muted, VerticalSpace } from '@create-figma-plugin/ui'
 import type { TreeNode, ExportItem, SectionFormat } from './types'
 import JSZip from 'jszip'
 import GIF from 'gif.js'
@@ -849,6 +849,10 @@ function App() {
   const [zipBlob, setZipBlob] = useState<Blob | null>(null)
   const [zipSizeMb, setZipSizeMb] = useState(0)
   const [exportedCount, setExportedCount] = useState(0)
+  const [exportedFilter, setExportedFilter] = useState<{
+    format?: string
+    platform?: string
+  } | null>(null)
   const [search, setSearch] = useState('')
 
   // Refs for access inside async message handlers without stale closure issues
@@ -984,6 +988,7 @@ function App() {
           setZipBlob(blob)
           setZipSizeMb(parseFloat((blob.size / 1024 / 1024).toFixed(2)))
           setExportedCount(exportedFilesRef.current.length)
+          setExportedFilter(exportFilterRef.current)
           setPhase('done')
           track('export_completed', {
             frame_count: activeCountRef.current,
@@ -1101,7 +1106,14 @@ function App() {
 
   // ── Main UI ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: 12, fontFamily: 'Inter, system-ui, sans-serif', fontSize: 12 }}>
+    <div
+      style={{
+        padding: 12,
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: 12,
+        paddingBottom: phase === 'ready' || phase === 'done' ? 100 : 12,
+      }}
+    >
       {/* Header with item count and rescan */}
       <div
         style={{
@@ -1271,14 +1283,24 @@ function App() {
 
       {/* Export button */}
       {!isExporting && phase !== 'done' && (
-        <Fragment>
-          <VerticalSpace space="small" />
-          <Divider />
-          <VerticalSpace space="small" />
-          <Button fullWidth onClick={handleExport}>
-            Экспорт ({items.length} {declension(items.length, 'файл', 'файла', 'файлов')})
-          </Button>
-        </Fragment>
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: '12px 16px 16px',
+            background: 'var(--figma-color-bg)',
+            borderTop: '1px solid var(--figma-color-border)',
+          }}
+        >
+          <div class="export-btn-wrap">
+            <style>{`.export-btn-wrap button { padding: 12px 16px !important; font-size: 13px !important; height: auto !important; }`}</style>
+            <Button fullWidth onClick={handleExport}>
+              Экспорт ({items.length} {declension(items.length, 'файл', 'файла', 'файлов')})
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* Progress + cancel */}
@@ -1326,14 +1348,31 @@ function App() {
 
       {/* Download */}
       {phase === 'done' && zipBlob && (
-        <Fragment>
-          <VerticalSpace space="small" />
-          <Button fullWidth onClick={handleDownload}>
-            Скачать ZIP · {zipSizeMb} МБ · {exportedCount}{' '}
-            {declension(exportedCount, 'файл', 'файла', 'файлов')}
-          </Button>
-          <VerticalSpace space="extraSmall" />
-          <div style={{ textAlign: 'center' }}>
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: '12px 16px 16px',
+            background: 'var(--figma-color-bg)',
+            borderTop: '1px solid var(--figma-color-border)',
+          }}
+        >
+          <div class="export-btn-wrap">
+            <style>{`.export-btn-wrap button { padding: 12px 16px !important; font-size: 13px !important; height: auto !important; }`}</style>
+            <Button fullWidth onClick={handleDownload}>
+              Скачать ZIP
+              {exportedFilter?.platform
+                ? ` ${exportedFilter.platform}`
+                : exportedFilter?.format
+                  ? ` ${exportedFilter.format.toUpperCase()}`
+                  : ''}{' '}
+              · {zipSizeMb} МБ · {exportedCount}{' '}
+              {declension(exportedCount, 'файл', 'файла', 'файлов')}
+            </Button>
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 8 }}>
             <span
               onClick={handleRescan}
               style={{
@@ -1343,10 +1382,10 @@ function App() {
                 userSelect: 'none',
               }}
             >
-              Экспортировать ещё
+              Очистить экспорт
             </span>
           </div>
-        </Fragment>
+        </div>
       )}
     </div>
   )
@@ -2102,7 +2141,9 @@ function Root() {
 
   return (
     <Fragment>
-      <TabBar active={activeTab} onChange={setActiveTab} />
+      <div style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+        <TabBar active={activeTab} onChange={setActiveTab} />
+      </div>
       <div style={{ display: activeTab === 'export' ? 'block' : 'none' }}>
         <App />
       </div>
