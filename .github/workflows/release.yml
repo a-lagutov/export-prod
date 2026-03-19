@@ -25,7 +25,7 @@ jobs:
 
       - name: Get plugin name
         id: plugin
-        run: echo "name=$(jq -r '.name | gsub(" "; "-")' manifest.json)" >> $GITHUB_OUTPUT
+        run: echo "name=$(jq -r '.name | gsub(" "; "-")' dist/manifest.json)" >> $GITHUB_OUTPUT
 
       - name: Zip dist
         run: zip -r "${{ steps.plugin.outputs.name }}.zip" dist/

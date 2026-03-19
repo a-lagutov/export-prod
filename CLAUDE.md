@@ -98,6 +98,17 @@ PostHog EU, fire-and-forget via fetch. Key and host injected at build time — n
 
 Tracked events: `plugin_opened`, `export_started`, `export_completed`, `export_cancelled`, `export_error`.
 
+## Releases
+
+Releases are created automatically via GitHub Actions (`.github/workflows/release.yml`) when a version tag is pushed:
+
+```bash
+git tag v1.2
+git push origin v1.2
+```
+
+The workflow builds the plugin and attaches the ZIP (`dist/`) to the GitHub release. Do not create releases manually.
+
 ## Key Dependencies
 
 - `jszip` — ZIP assembly in the browser
