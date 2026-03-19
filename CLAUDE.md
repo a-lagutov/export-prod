@@ -78,6 +78,7 @@ Frame processing is sequential (one at a time) to avoid overloading the Figma pl
 - **Tree view** with collapsible format/channel/platform/creative nodes; sticky format headers
 - **Per-frame size limits**: `FrameRow` component with hover highlight (`--figma-color-bg-hover`) and click-to-focus on limit input
 - **Per-platform size limits**: global limits per format+platform combination
+- **Numeric inputs** (`NumInput`, `FrameRow` limit field): `type="text"` with `inputMode="decimal"`. Input is filtered on change — only digits and one decimal dot allowed; commas are converted to dots. On blur: trailing dot is stripped, value `<= 0` clears to empty (empty = no limit). Do not switch these back to `type="number"`.
 - **Search/filter**: filters the tree by name or size
 - **Path mode**: segmented control to include or strip the format folder from ZIP paths
 - **GIF delay**: configurable frame delay (seconds)
