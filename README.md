@@ -10,12 +10,9 @@ A Figma plugin for batch exporting frames as JPG, PNG, WebP, or GIF with file si
 
 ### Installation
 
-```bash
-npm install
-npm run build
-```
+Download the latest release from [Releases](https://github.com/a-lagutov/export-prod/releases) and unzip it.
 
-Then in Figma: **Plugins → Development → Import plugin from manifest** → select `dist/manifest.json`.
+In Figma: **Plugins → Development → Import plugin from manifest** → select the `manifest.json` file from the `ADV-Export-Prod` folder.
 
 ### Development
 
@@ -131,12 +128,9 @@ Figma-плагин для пакетного экспорта фреймов в 
 
 ### Установка
 
-```bash
-npm install
-npm run build
-```
+Скачайте последний релиз с [Releases](https://github.com/a-lagutov/export-prod/releases) и распакуйте архив.
 
-Затем в Figma: **Plugins → Development → Import plugin from manifest** → выбрать `dist/manifest.json`.
+В Figma: **Plugins → Development → Import plugin from manifest** → выберите файл `manifest.json` из папки `ADV-Export-Prod`.
 
 ### Разработка
 
