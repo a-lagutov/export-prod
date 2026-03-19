@@ -13,7 +13,7 @@ npm run build     # Full build: code.ts + ui.tsx → dist/ (NODE_ENV=production)
 npm run watch     # Watch mode for code.ts only (NODE_ENV=development, does NOT rebuild ui.html)
 ```
 
-There are no tests or linting configured.
+Linting and formatting are configured via ESLint + Prettier with a Husky pre-commit hook. Run `npm run prepare` once after cloning to activate the hook.
 
 ## Environment Variables
 
@@ -121,3 +121,9 @@ The workflow builds the plugin and attaches the ZIP (`dist/`) to the GitHub rele
 - `@create-figma-plugin/ui` — Figma-styled UI components
 - `@figma/plugin-typings` — TypeScript types for Figma Plugin API
 - `esbuild` — Bundler
+
+## TypeScript / IDE Notes
+
+- `tsconfig.json` uses `"moduleResolution": "bundler"` — required for VS Code to resolve modern packages (preact, jszip, etc.) that use the `exports` field in `package.json`. Do not change this to `node`.
+- `Uint8Array` received from the Figma plugin bridge has type `Uint8Array<ArrayBufferLike>`, which is not directly assignable to `BlobPart`. Cast with `as BlobPart` where needed (e.g. `new Blob([bytes as BlobPart])`).
+- After cloning, run `npm run prepare` to install the Husky pre-commit hook (lint-staged + ESLint + Prettier check).

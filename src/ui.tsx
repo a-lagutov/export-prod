@@ -22,7 +22,7 @@ function getGifWorkerUrl(): string {
 
 function pngBytesToCanvas(pngBytes: Uint8Array): Promise<HTMLCanvasElement> {
   return new Promise((resolve) => {
-    const blob = new Blob([pngBytes], { type: 'image/png' })
+    const blob = new Blob([pngBytes as BlobPart], { type: 'image/png' })
     const url = URL.createObjectURL(blob)
     const img = new Image()
     img.onload = () => {
@@ -466,7 +466,9 @@ function FrameRow({
     const filtered = raw.replace(/,/g, '.').replace(/[^0-9.]/g, '')
     const dotIdx = filtered.indexOf('.')
     const sanitized =
-      dotIdx === -1 ? filtered : filtered.slice(0, dotIdx + 1) + filtered.slice(dotIdx + 1).replace(/\./g, '')
+      dotIdx === -1
+        ? filtered
+        : filtered.slice(0, dotIdx + 1) + filtered.slice(dotIdx + 1).replace(/\./g, '')
     if (sanitized !== raw) el.value = sanitized
     onFrameSizeChange(key, sanitized)
   }
@@ -645,7 +647,9 @@ function NumInput({
     const filtered = raw.replace(/,/g, '.').replace(/[^0-9.]/g, '')
     const dotIdx = filtered.indexOf('.')
     const sanitized =
-      dotIdx === -1 ? filtered : filtered.slice(0, dotIdx + 1) + filtered.slice(dotIdx + 1).replace(/\./g, '')
+      dotIdx === -1
+        ? filtered
+        : filtered.slice(0, dotIdx + 1) + filtered.slice(dotIdx + 1).replace(/\./g, '')
     if (sanitized !== raw) el.value = sanitized
     onChange(sanitized)
   }
