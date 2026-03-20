@@ -4,14 +4,41 @@ const path = require('path')
 
 const root = path.resolve(__dirname, '..')
 
+function loadEnv(mode) {
+  const candidates = [`.env.${mode}.local`, '.env.local', `.env.${mode}`, '.env']
+  const result = {}
+  for (const file of [...candidates].reverse()) {
+    const filePath = path.join(root, file)
+    if (!fs.existsSync(filePath)) continue
+    const lines = fs.readFileSync(filePath, 'utf-8').split('\n')
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) continue
+      const eq = trimmed.indexOf('=')
+      if (eq === -1) continue
+      const key = trimmed.slice(0, eq).trim()
+      const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '')
+      result[key] = val
+    }
+  }
+  return result
+}
+
+const env = loadEnv('development')
+const envDefine = Object.fromEntries(
+  ['POSTHOG_KEY', 'POSTHOG_HOST'].map((k) => [`__${k}__`, JSON.stringify(env[k] ?? '')])
+)
+
 const gifWorkerContent = fs.readFileSync(
   path.join(root, 'node_modules/gif.js/dist/gif.worker.js'),
   'utf-8',
 )
 
 function writeHtml() {
+  const jsContent = fs.readFileSync(path.join(root, 'dist/ui.js'), 'utf-8')
   const hasCss = fs.existsSync(path.join(root, 'dist/ui.css'))
-  const cssTag = hasCss ? '<link rel="stylesheet" href="ui.css">' : ''
+  const cssContent = hasCss ? fs.readFileSync(path.join(root, 'dist/ui.css'), 'utf-8') : ''
+  const cssTag = cssContent ? `<style>${cssContent}</style>` : ''
   fs.writeFileSync(
     path.join(root, 'dist/ui.html'),
     `<!DOCTYPE html>
@@ -22,7 +49,7 @@ ${cssTag}
 </head>
 <body>
 <div id="create-figma-plugin"></div>
-<script src="ui.js"></script>
+<script>${jsContent}</script>
 </body>
 </html>
 `,
@@ -54,6 +81,7 @@ async function watch() {
     jsxImportSource: 'preact',
     define: {
       __GIF_WORKER_CONTENT__: JSON.stringify(gifWorkerContent),
+      ...envDefine,
     },
     loader: { '.css': 'css' },
     target: 'es2017',
