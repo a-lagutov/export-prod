@@ -1296,7 +1296,7 @@ function App() {
         >
           <div class="export-btn-wrap">
             <style>{`.export-btn-wrap button { padding: 12px 16px !important; font-size: 13px !important; height: auto !important; }`}</style>
-            <Button fullWidth onClick={handleExport}>
+            <Button fullWidth onClick={() => handleExport()}>
               Экспорт ({items.length} {declension(items.length, 'файл', 'файла', 'файлов')})
             </Button>
           </div>
