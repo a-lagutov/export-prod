@@ -7,6 +7,7 @@ import JSZip from 'jszip'
 import GIF from 'gif.js'
 import { track } from './analytics'
 import { log, error, fromCodeThread } from './logger'
+import * as config from './plugin-config'
 
 // gif.worker.js content injected at build time via esbuild define
 declare const __GIF_WORKER_CONTENT__: string
@@ -68,7 +69,7 @@ async function binarySearchQuality(
     }
     return iterate(n - 1)
   }
-  return iterate(8)
+  return iterate(config.JPG_SEARCH_ITERATIONS)
 }
 
 async function compressPngToTarget(canvas: HTMLCanvasElement, targetSize: number): Promise<Blob> {
@@ -95,11 +96,11 @@ async function compressPngToTarget(canvas: HTMLCanvasElement, targetSize: number
     return canvasToBlob(tmp, 'image/png')
   }
 
-  let lo = 2,
-    hi = 256,
+  let lo = config.PNG_LEVELS_MIN,
+    hi = config.PNG_LEVELS_MAX,
     best: Blob | null = null
   async function iterate(n: number): Promise<Blob> {
-    if (n <= 0) return best ?? quantize(2)
+    if (n <= 0) return best ?? quantize(config.PNG_LEVELS_MIN)
     const mid = Math.floor((lo + hi) / 2)
     const blob = await quantize(mid)
     if (blob.size <= targetSize) {
@@ -1296,7 +1297,7 @@ function App() {
   // ── Empty state — show guide ──────────────────────────────────────────────
   if (phase === 'empty') {
     return (
-      <div style={{ padding: 12 }}>
+      <div style={{ padding: 12, flex: 1, minHeight: 0, overflowY: 'auto' }}>
         <SetupGuide />
         <VerticalSpace space="small" />
         <Button fullWidth onClick={handleRescan}>

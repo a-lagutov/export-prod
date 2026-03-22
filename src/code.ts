@@ -1,5 +1,6 @@
 // Export Prod — Figma plugin main thread
 import type { TreeNode, ExportItem, SectionFormat } from './types'
+import * as config from './plugin-config'
 
 const FORMATS = ['jpg', 'png', 'webp', 'gif'] as const
 
@@ -126,7 +127,7 @@ function scanPage(): { tree: TreeNode[]; items: ExportItem[] } {
 // Uses local coordinates (always current) instead of absoluteBoundingBox (can be stale).
 // Shifts the section origin so content has `padding` space on all sides, compensating
 // children's local positions to keep their absolute positions unchanged.
-function fitSectionToChildren(section: SectionNode, padding = 40): void {
+function fitSectionToChildren(section: SectionNode, padding = config.SECTION_FIT_PADDING): void {
   const children = section.children as SceneNode[]
   if (children.length === 0) return
 
@@ -222,7 +223,11 @@ function getAllSections(): SectionFormat[] {
 let exportItems: ExportItem[] = []
 let isExporting = false
 
-figma.showUI(__html__, { width: 400, height: 560, themeColors: true })
+figma.showUI(__html__, {
+  width: config.WINDOW_WIDTH,
+  height: config.WINDOW_HEIGHT,
+  themeColors: true,
+})
 
 // Re-scan when page changes
 figma.on('currentpagechange', () => {
@@ -243,7 +248,7 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
 
   if (msg.type === 'resize') {
     const h = msg.height as number
-    figma.ui.resize(400, Math.max(200, h))
+    figma.ui.resize(config.WINDOW_WIDTH, Math.max(config.WINDOW_MIN_HEIGHT, h))
   }
 
   if (msg.type === 'get-sections') {
@@ -271,9 +276,6 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
 
     const page = figma.currentPage
     const normalizedFormat = formatName.toUpperCase()
-    const PLACE_PADDING = 250
-    const FRAME_GAP = 250
-    const GIF_SLIDE_GAP = 50
 
     // Collect existing format sections before creating a new one (used for positioning)
     const existingFormatSections = page.children.filter(
@@ -292,7 +294,7 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
       if (existingFormatSections.length > 0) {
         // Place 5000px to the right of the rightmost format section
         const rightmostX = Math.max(...existingFormatSections.map((s) => s.x + s.width))
-        formatSection.x = rightmostX + 5000
+        formatSection.x = rightmostX + config.FORMAT_SECTION_GAP
         formatSection.y = Math.min(...existingFormatSections.map((s) => s.y))
       } else {
         // No format sections yet — place at the selected frames' position
@@ -302,7 +304,7 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
         formatSection.y = absY
       }
     }
-    setSectionFill(formatSection, 0.2)
+    setSectionFill(formatSection, config.FORMAT_SECTION_OPACITY)
 
     // Find or create channel section
     let channelSection = formatSection.children.find(
@@ -317,13 +319,13 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
       )
       if (chSiblings.length > 0) {
         channelSection.x = Math.min(...chSiblings.map((s) => s.x))
-        channelSection.y = Math.max(...chSiblings.map((s) => s.y + s.height)) + FRAME_GAP
+        channelSection.y = Math.max(...chSiblings.map((s) => s.y + s.height)) + config.FRAME_GAP
       } else {
-        channelSection.x = PLACE_PADDING
-        channelSection.y = PLACE_PADDING
+        channelSection.x = config.PLACE_PADDING
+        channelSection.y = config.PLACE_PADDING
       }
     }
-    setSectionFill(channelSection, 0.4)
+    setSectionFill(channelSection, config.CHANNEL_SECTION_OPACITY)
 
     // Find or create platform section
     let platformSection = channelSection.children.find(
@@ -338,13 +340,13 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
       )
       if (plSiblings.length > 0) {
         platformSection.x = Math.min(...plSiblings.map((s) => s.x))
-        platformSection.y = Math.max(...plSiblings.map((s) => s.y + s.height)) + FRAME_GAP
+        platformSection.y = Math.max(...plSiblings.map((s) => s.y + s.height)) + config.FRAME_GAP
       } else {
-        platformSection.x = PLACE_PADDING
-        platformSection.y = PLACE_PADDING
+        platformSection.x = config.PLACE_PADDING
+        platformSection.y = config.PLACE_PADDING
       }
     }
-    setSectionFill(platformSection, 0.6)
+    setSectionFill(platformSection, config.PLATFORM_SECTION_OPACITY)
 
     // Find or create creative section
     let creativeSection = platformSection.children.find(
@@ -358,21 +360,21 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
         (n): n is SectionNode => isSection(n) && n !== creativeSection,
       )
       if (crSiblings.length > 0) {
-        creativeSection.x = Math.max(...crSiblings.map((s) => s.x + s.width)) + FRAME_GAP
+        creativeSection.x = Math.max(...crSiblings.map((s) => s.x + s.width)) + config.FRAME_GAP
         creativeSection.y = Math.min(...crSiblings.map((s) => s.y))
       } else {
-        creativeSection.x = PLACE_PADDING
-        creativeSection.y = PLACE_PADDING
+        creativeSection.x = config.PLACE_PADDING
+        creativeSection.y = config.PLACE_PADDING
       }
     }
-    setSectionFill(creativeSection, 0.8)
+    setSectionFill(creativeSection, config.CREATIVE_SECTION_OPACITY)
 
     // Find bottom of existing frames in creative section (local coords)
     const existingFrames = creativeSection.children.filter(isFrame) as FrameNode[]
     let nextY =
       existingFrames.length > 0
-        ? Math.max(...existingFrames.map((f) => f.y + f.height)) + FRAME_GAP
-        : PLACE_PADDING
+        ? Math.max(...existingFrames.map((f) => f.y + f.height)) + config.FRAME_GAP
+        : config.PLACE_PADDING
 
     // Place frames: vertically stacked; for GIF — group by name+y, slides horizontal
     if (formatName.toLowerCase() === 'gif') {
@@ -384,29 +386,29 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
       }
       for (const [, groupFrames] of groups) {
         groupFrames.sort((a, b) => a.x - b.x)
-        let groupNextX = PLACE_PADDING
+        let groupNextX = config.PLACE_PADDING
         for (const frame of groupFrames) {
           creativeSection.appendChild(frame)
           frame.x = groupNextX
           frame.y = nextY
-          groupNextX += frame.width + GIF_SLIDE_GAP
+          groupNextX += frame.width + config.GIF_SLIDE_GAP
         }
-        nextY += Math.max(...groupFrames.map((f) => f.height)) + FRAME_GAP
+        nextY += Math.max(...groupFrames.map((f) => f.height)) + config.FRAME_GAP
       }
     } else {
       for (const frame of selectedFrames) {
         creativeSection.appendChild(frame)
-        frame.x = PLACE_PADDING
+        frame.x = config.PLACE_PADDING
         frame.y = nextY
-        nextY += frame.height + FRAME_GAP
+        nextY += frame.height + config.FRAME_GAP
       }
     }
 
     // Resize sections bottom-up with 250px padding
-    fitSectionToChildren(creativeSection, PLACE_PADDING)
-    fitSectionToChildren(platformSection, PLACE_PADDING)
-    fitSectionToChildren(channelSection, PLACE_PADDING)
-    fitSectionToChildren(formatSection, PLACE_PADDING)
+    fitSectionToChildren(creativeSection, config.PLACE_PADDING)
+    fitSectionToChildren(platformSection, config.PLACE_PADDING)
+    fitSectionToChildren(channelSection, config.PLACE_PADDING)
+    fitSectionToChildren(formatSection, config.PLACE_PADDING)
 
     // Scroll viewport to show the result; select format section if it's the first one ever
     if (isNewFormatSection && existingFormatSections.length === 0) {
@@ -431,10 +433,6 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
   }
 
   if (msg.type === 'align-sections') {
-    const ALIGN_PADDING = 250
-    const ALIGN_GAP = 250
-    const FORMAT_GAP = 5000
-
     const formatSections: SectionNode[] = []
 
     for (const topChild of figma.currentPage.children) {
@@ -451,50 +449,50 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
           // Step 1: fit each creative to its frames (normalises frame positions inside)
           for (const cr of pl.children) {
             if (!isSection(cr)) continue
-            fitSectionToChildren(cr, ALIGN_PADDING)
+            fitSectionToChildren(cr, config.ALIGN_PADDING)
             setSectionFill(cr, 0.8)
           }
 
           // Step 2: reposition creatives horizontally sorted by name
           const creatives = [...pl.children].filter(isSection) as SectionNode[]
           creatives.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
-          let nextX = ALIGN_PADDING
+          let nextX = config.ALIGN_PADDING
           for (const cr of creatives) {
             cr.x = nextX
-            cr.y = ALIGN_PADDING
-            nextX += cr.width + ALIGN_GAP
+            cr.y = config.ALIGN_PADDING
+            nextX += cr.width + config.ALIGN_GAP
           }
 
           // Step 3: resize platform to contain repositioned creatives
-          resizeSectionOnly(pl, ALIGN_PADDING)
+          resizeSectionOnly(pl, config.ALIGN_PADDING)
           setSectionFill(pl, 0.6)
         }
 
         // Step 4: reposition platforms vertically within channel
-        let nextY = ALIGN_PADDING
+        let nextY = config.ALIGN_PADDING
         for (const pl of ch.children) {
           if (!isSection(pl)) continue
-          pl.x = ALIGN_PADDING
+          pl.x = config.ALIGN_PADDING
           pl.y = nextY
-          nextY += pl.height + ALIGN_GAP
+          nextY += pl.height + config.ALIGN_GAP
         }
 
         // Step 5: resize channel
-        resizeSectionOnly(ch, ALIGN_PADDING)
+        resizeSectionOnly(ch, config.ALIGN_PADDING)
         setSectionFill(ch, 0.4)
       }
 
       // Step 6: reposition channels vertically within format
-      let nextY = ALIGN_PADDING
+      let nextY = config.ALIGN_PADDING
       for (const ch of topChild.children) {
         if (!isSection(ch)) continue
-        ch.x = ALIGN_PADDING
+        ch.x = config.ALIGN_PADDING
         ch.y = nextY
-        nextY += ch.height + ALIGN_GAP
+        nextY += ch.height + config.ALIGN_GAP
       }
 
       // Step 7: resize format section
-      resizeSectionOnly(topChild, ALIGN_PADDING)
+      resizeSectionOnly(topChild, config.ALIGN_PADDING)
       setSectionFill(topChild, 0.2)
     }
 
@@ -505,7 +503,7 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
     for (const fmt of formatSections) {
       fmt.x = nextX
       fmt.y = topY
-      nextX += fmt.width + FORMAT_GAP
+      nextX += fmt.width + config.ALIGN_FORMAT_GAP
     }
 
     if (formatSections.length > 0) {
@@ -593,7 +591,7 @@ let rescanTimer: ReturnType<typeof setTimeout> | null = null
       exportItems = result.items
       figma.ui.postMessage({ type: 'scan-result', tree: result.tree, items: result.items })
       figma.ui.postMessage({ type: 'sections-data', sections: getAllSections() })
-    }, 500)
+    }, config.RESCAN_DEBOUNCE_MS)
   })
 })()
 
@@ -605,7 +603,10 @@ figma.on('selectionchange', () => {
 async function sendFrame(index: number) {
   const item = exportItems[index]
   const total = exportItems.length
-  const exportSettings: ExportSettings = { format: 'PNG', constraint: { type: 'SCALE', value: 1 } }
+  const exportSettings: ExportSettings = {
+    format: 'PNG',
+    constraint: { type: 'SCALE', value: config.EXPORT_SCALE },
+  }
 
   if (item.format === 'gif') {
     // Export all gif frames
