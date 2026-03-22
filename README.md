@@ -110,7 +110,7 @@ The Export button is always visible at the bottom of the window. After export co
 
 #### File Size Limits
 
-Limits are set in the plugin interface — globally per platform or individually per frame (in MB).
+Limits are set in the plugin interface — globally per platform or individually per frame (in MB). Per-frame limits are accessed via the **Ресайзы** button, which opens a dedicated screen with the full frame tree (all nodes expanded by default). The button shows the total frame count.
 
 #### Compression Algorithm
 
@@ -267,7 +267,7 @@ xxxx-yyy
 
 #### Лимиты размера
 
-Лимиты задаются в интерфейсе плагина — глобально по площадке или отдельно для каждого фрейма (в МБ).
+Лимиты задаются в интерфейсе плагина — глобально по площадке или отдельно для каждого фрейма (в МБ). Лимиты по фреймам доступны через кнопку **Ресайзы**, которая открывает отдельный экран с полным деревом фреймов (все узлы раскрыты по умолчанию). На кнопке отображается общее количество файлов.
 
 #### Алгоритм сжатия
 
