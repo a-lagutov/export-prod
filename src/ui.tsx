@@ -1116,134 +1116,108 @@ function App() {
   return (
     <div
       style={{
-        padding: 12,
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
         fontFamily: 'Inter, system-ui, sans-serif',
         fontSize: 12,
-        paddingBottom: phase === 'ready' || phase === 'done' || phase === 'exporting' ? 100 : 12,
       }}
     >
-      {/* Header with item count and rescan */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 8,
-        }}
-      >
-        <Text>
-          <strong>Найдено {items.length}</strong>{' '}
-          <Muted>{declension(items.length, 'файл', 'файла', 'файлов')}</Muted>
-        </Text>
-        <span
-          onClick={handleRescan}
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 12 }}>
+        {/* Header with item count and rescan */}
+        <div
           style={{
-            cursor: 'pointer',
-            fontSize: 11,
-            color: 'var(--figma-color-text-brand)',
-            userSelect: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 8,
           }}
         >
-          Обновить
-        </span>
-      </div>
-
-      {/* Search */}
-      <SearchInput value={search} onChange={setSearch} />
-      <VerticalSpace space="small" />
-
-      {/* Tree */}
-      <Text>
-        <strong>Лимиты по ресайзам</strong>
-      </Text>
-      <VerticalSpace space="small" />
-      <div
-        style={{
-          maxHeight: 240,
-          overflowY: 'auto',
-          border: '1px solid var(--figma-color-border)',
-          borderRadius: 6,
-          padding: '0 12px 12px 12px',
-        }}
-      >
-        {filteredTree.length > 0 ? (
-          filteredTree.map((node, i) => (
-            <TreeNodeView
-              key={i}
-              node={node}
-              formatTag=""
-              frameSizes={frameSizes}
-              onFrameSizeChange={(key, val) => setFrameSizes((prev) => ({ ...prev, [key]: val }))}
-              defaultExpanded={!!search}
-            />
-          ))
-        ) : (
-          <div style={{ padding: 12, textAlign: 'center' }}>
-            <Muted>Ничего не найдено</Muted>
-          </div>
-        )}
-      </div>
-
-      {/* Platform limits */}
-      {formatPlatforms.length > 0 && (
-        <Fragment>
-          <VerticalSpace space="small" />
           <Text>
-            <strong>Лимиты по площадкам</strong>
+            <strong>Найдено {items.length}</strong>{' '}
+            <Muted>{declension(items.length, 'файл', 'файла', 'файлов')}</Muted>
           </Text>
-          <VerticalSpace space="small" />
-          <div
+          <span
+            onClick={handleRescan}
             style={{
-              border: '1px solid var(--figma-color-border)',
-              borderRadius: 6,
-              padding: 8,
+              cursor: 'pointer',
+              fontSize: 11,
+              color: 'var(--figma-color-text-brand)',
+              userSelect: 'none',
             }}
           >
-            {formatPlatforms.map(({ format, platforms }) => (
-              <Fragment key={format}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    marginBottom: 4,
-                  }}
-                >
-                  <button
-                    onClick={() => !isExporting && handleExport({ format })}
-                    disabled={isExporting}
-                    title={`Экспортировать только ${format.toUpperCase()}`}
+            Обновить
+          </span>
+        </div>
+
+        {/* Search */}
+        <SearchInput value={search} onChange={setSearch} />
+        <VerticalSpace space="small" />
+
+        {/* Tree */}
+        <Text>
+          <strong>Лимиты по ресайзам</strong>
+        </Text>
+        <VerticalSpace space="small" />
+        <div
+          style={{
+            maxHeight: 240,
+            overflowY: 'auto',
+            border: '1px solid var(--figma-color-border)',
+            borderRadius: 6,
+            padding: '0 12px 12px 12px',
+          }}
+        >
+          {filteredTree.length > 0 ? (
+            filteredTree.map((node, i) => (
+              <TreeNodeView
+                key={i}
+                node={node}
+                formatTag=""
+                frameSizes={frameSizes}
+                onFrameSizeChange={(key, val) => setFrameSizes((prev) => ({ ...prev, [key]: val }))}
+                defaultExpanded={!!search}
+              />
+            ))
+          ) : (
+            <div style={{ padding: 12, textAlign: 'center' }}>
+              <Muted>Ничего не найдено</Muted>
+            </div>
+          )}
+        </div>
+
+        {/* Platform limits */}
+        {formatPlatforms.length > 0 && (
+          <Fragment>
+            <VerticalSpace space="small" />
+            <Text>
+              <strong>Лимиты по площадкам</strong>
+            </Text>
+            <VerticalSpace space="small" />
+            <div
+              style={{
+                border: '1px solid var(--figma-color-border)',
+                borderRadius: 6,
+                padding: 8,
+              }}
+            >
+              {formatPlatforms.map(({ format, platforms }) => (
+                <Fragment key={format}>
+                  <div
                     style={{
-                      padding: '2px 8px',
-                      fontSize: 10,
-                      border: '1px solid var(--figma-color-border)',
-                      borderRadius: 4,
-                      background: 'var(--figma-color-bg-secondary)',
-                      color: isExporting
-                        ? 'var(--figma-color-text-disabled)'
-                        : 'var(--figma-color-text)',
-                      cursor: isExporting ? 'default' : 'pointer',
-                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      marginBottom: 4,
                     }}
                   >
-                    ↓
-                  </button>
-                  <TagBadge format={format} />
-                </div>
-                {platforms.map((name) => (
-                  <div
-                    key={name}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}
-                  >
                     <button
-                      onClick={() => !isExporting && handleExport({ format, platform: name })}
+                      onClick={() => !isExporting && handleExport({ format })}
                       disabled={isExporting}
-                      title={`Экспортировать ${format.toUpperCase()} / ${name}`}
+                      title={`Экспортировать только ${format.toUpperCase()}`}
                       style={{
-                        width: 22,
-                        height: 22,
-                        padding: 0,
-                        fontSize: 12,
+                        padding: '2px 8px',
+                        fontSize: 10,
                         border: '1px solid var(--figma-color-border)',
                         borderRadius: 4,
                         background: 'var(--figma-color-bg-secondary)',
@@ -1252,51 +1226,76 @@ function App() {
                           : 'var(--figma-color-text)',
                         cursor: isExporting ? 'default' : 'pointer',
                         flexShrink: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
                       }}
                     >
                       ↓
                     </button>
-                    <div style={{ flex: 1 }}>
-                      <Text>{name}</Text>
-                    </div>
-                    <NumInput
-                      value={platformSizes[`${format}/${name}`] ?? ''}
-                      onChange={(v) =>
-                        setPlatformSizes((prev) => ({ ...prev, [`${format}/${name}`]: v }))
-                      }
-                      suffix="МБ"
-                    />
+                    <TagBadge format={format} />
                   </div>
-                ))}
-                <VerticalSpace space="extraSmall" />
-              </Fragment>
-            ))}
-          </div>
-        </Fragment>
-      )}
+                  {platforms.map((name) => (
+                    <div
+                      key={name}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}
+                    >
+                      <button
+                        onClick={() => !isExporting && handleExport({ format, platform: name })}
+                        disabled={isExporting}
+                        title={`Экспортировать ${format.toUpperCase()} / ${name}`}
+                        style={{
+                          width: 22,
+                          height: 22,
+                          padding: 0,
+                          fontSize: 12,
+                          border: '1px solid var(--figma-color-border)',
+                          borderRadius: 4,
+                          background: 'var(--figma-color-bg-secondary)',
+                          color: isExporting
+                            ? 'var(--figma-color-text-disabled)'
+                            : 'var(--figma-color-text)',
+                          cursor: isExporting ? 'default' : 'pointer',
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        ↓
+                      </button>
+                      <div style={{ flex: 1 }}>
+                        <Text>{name}</Text>
+                      </div>
+                      <NumInput
+                        value={platformSizes[`${format}/${name}`] ?? ''}
+                        onChange={(v) =>
+                          setPlatformSizes((prev) => ({ ...prev, [`${format}/${name}`]: v }))
+                        }
+                        suffix="МБ"
+                      />
+                    </div>
+                  ))}
+                  <VerticalSpace space="extraSmall" />
+                </Fragment>
+              ))}
+            </div>
+          </Fragment>
+        )}
 
-      {/* GIF delay */}
-      {hasGif && (
-        <Fragment>
-          <VerticalSpace space="small" />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Text>Задержка GIF</Text>
-            <NumInput value={gifDelay} onChange={setGifDelay} width={60} suffix="сек" />
-          </div>
-        </Fragment>
-      )}
+        {/* GIF delay */}
+        {hasGif && (
+          <Fragment>
+            <VerticalSpace space="small" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Text>Задержка GIF</Text>
+              <NumInput value={gifDelay} onChange={setGifDelay} width={60} suffix="сек" />
+            </div>
+          </Fragment>
+        )}
+      </div>
 
       {/* Export button */}
       {!isExporting && phase !== 'done' && (
         <div
           style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
             padding: '12px 16px 16px',
             background: 'var(--figma-color-bg)',
             borderTop: '1px solid var(--figma-color-border)',
@@ -1315,10 +1314,6 @@ function App() {
       {isExporting && (
         <div
           style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
             padding: '12px 16px 16px',
             background: 'var(--figma-color-bg)',
             borderTop: '1px solid var(--figma-color-border)',
@@ -1365,10 +1360,6 @@ function App() {
       {phase === 'done' && zipBlob && (
         <div
           style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
             padding: '12px 16px 16px',
             background: 'var(--figma-color-bg)',
             borderTop: '1px solid var(--figma-color-border)',
@@ -2163,18 +2154,32 @@ function Root() {
   }, [activeTab])
 
   return (
-    <Fragment>
-      <div style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-        <TabBar active={activeTab} onChange={setActiveTab} />
-      </div>
-      <div style={{ display: activeTab === 'export' ? 'block' : 'none' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <style>{`html, body, #create-figma-plugin { height: 100%; overflow: hidden; }`}</style>
+      <TabBar active={activeTab} onChange={setActiveTab} />
+      <div
+        style={{
+          display: activeTab === 'export' ? 'flex' : 'none',
+          flex: 1,
+          flexDirection: 'column',
+          minHeight: 0,
+          overflow: 'hidden',
+        }}
+      >
         <App />
       </div>
-      <div style={{ display: activeTab === 'organize' ? 'block' : 'none' }}>
+      <div
+        style={{
+          display: activeTab === 'organize' ? 'block' : 'none',
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+        }}
+      >
         <OrganizePage />
       </div>
       <ResizeHandle />
-    </Fragment>
+    </div>
   )
 }
 
