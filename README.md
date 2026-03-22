@@ -95,7 +95,7 @@ Layout rules:
 - Frames within a creative are stacked **vertically** (GIF slides — horizontally).
 - New creative sections are placed to the **right** of existing ones within a platform.
 - New platform / channel sections are placed **below** existing ones.
-- All sections are resized bottom-up (creative → platform → channel → format) to tightly wrap their content with 250 px padding.
+- All sections are resized bottom-up (creative → platform → channel → format) to tightly wrap their content with configurable padding (see `src/plugin-config.ts`).
 
 ### Export
 
@@ -139,6 +139,7 @@ Two-thread Figma plugin model:
 |------|--------|------|
 | `src/code.ts` | Main thread (sandbox) | Page tree scanning, PNG export, frame renaming |
 | `src/ui.tsx` | UI thread (iframe, Preact) | Format conversion, GIF assembly, ZIP building, interface |
+| `src/plugin-config.ts` | — | Central config: window size, layout constants, compression parameters |
 
 Communication between threads via `postMessage` / `figma.ui.postMessage`.
 
@@ -256,7 +257,7 @@ xxxx-yyy
 - Фреймы внутри креатива укладываются **вертикально** (кадры GIF — горизонтально).
 - Новые секции креатива размещаются **правее** существующих внутри площадки.
 - Новые секции площадки / канала размещаются **ниже** существующих.
-- Все секции обновляются снизу вверх (креатив → площадка → канал → формат): плотно оборачивают содержимое с отступом 250 px.
+- Все секции обновляются снизу вверх (креатив → площадка → канал → формат): плотно оборачивают содержимое с настраиваемым отступом (см. `src/plugin-config.ts`).
 
 ### Экспорт
 
@@ -300,6 +301,7 @@ xxxx-yyy
 |------|-------|------|
 | `src/code.ts` | Main thread (sandbox) | Сканирование дерева страницы, экспорт PNG-байт, переименование фреймов |
 | `src/ui.tsx` | UI thread (iframe, Preact) | Конвертация форматов, сборка GIF, ZIP, интерфейс |
+| `src/plugin-config.ts` | — | Центральный конфиг: размер окна, константы раскладки, параметры сжатия |
 
 Общение между потоками через `postMessage` / `figma.ui.postMessage`.
 

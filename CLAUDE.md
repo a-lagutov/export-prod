@@ -55,6 +55,7 @@ When adding a new gitignored variable that should be present in production build
 
 - `src/code.ts` — Main thread (Figma sandbox). Scans the page tree, exports frame pixels as PNG bytes, sends them to the UI one at a time via `postMessage`.
 - `src/ui.tsx` — UI thread (iframe, Preact). Receives PNG bytes, converts to the target format, applies compression to meet size limits, assembles GIFs, builds the ZIP, and triggers download.
+- `src/plugin-config.ts` — Central config module. All tunable constants (window size, section layout gaps and opacities, compression parameters, GIF settings, debounce delay, export scale). Imported in both threads as `import * as config from './plugin-config'`.
 
 **Initialization handshake:** `code.ts` does NOT push `scan-result` on startup — the UI iframe may not have registered its message listener yet (race condition). Instead, the UI sends `{ type: 'scan' }` from its `useEffect` once the listener is registered, and `code.ts` responds. The same pull pattern applies to `get-sections` in the Place tab. Never switch back to push-on-startup for initial data.
 
@@ -136,8 +137,8 @@ Frame processing is sequential (one at a time) to avoid overloading the Figma pl
 - Select frames on the page, choose Format / Channel / Platform / Creative, click "Поместить в секции"
 - Sections are created if they don't exist; frames are appended to existing creative sections (stacked vertically, or horizontally for GIF slides)
 - **New section positioning**: new siblings are placed after existing ones (channels/platforms stack vertically; creatives stack horizontally within a platform)
-- **New format section positioning**: if other format sections already exist on the page, the new one is placed 5000px to the right of the rightmost; if no format sections exist yet, it is placed at the absolute position of the selected frames and automatically selected in Figma
-- **Section fitting** (`fitSectionToChildren` in `code.ts`): works in local coordinates — shifts the section origin so content has `padding` space on all sides, compensates children's local positions to keep their absolute positions unchanged, then resizes. Uses local coords (not `absoluteBoundingBox`) to avoid stale values after `appendChild`.
+- **New format section positioning**: if other format sections already exist on the page, the new one is placed `FORMAT_SECTION_GAP` px to the right of the rightmost; if no format sections exist yet, it is placed at the absolute position of the selected frames and automatically selected in Figma
+- **Section fitting** (`fitSectionToChildren` in `code.ts`): works in local coordinates — shifts the section origin so content has `padding` space on all sides, compensates children's local positions to keep their absolute positions unchanged, then resizes. Uses local coords (not `absoluteBoundingBox`) to avoid stale values after `appendChild`. Default padding is `SECTION_FIT_PADDING` (see `plugin-config.ts`).
 
 ## Analytics (`src/analytics.ts`)
 
