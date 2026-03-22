@@ -1128,35 +1128,34 @@ function App() {
         {/* Back header */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '8px 12px',
             borderBottom: '1px solid var(--figma-color-border)',
             background: 'var(--figma-color-bg)',
             flexShrink: 0,
           }}
         >
-          <span
-            onClick={() => setScreen('main')}
-            style={{
-              cursor: 'pointer',
-              fontSize: 18,
-              lineHeight: 1,
-              color: 'var(--figma-color-text-secondary)',
-              userSelect: 'none',
-              padding: '0 4px',
-            }}
-          >
-            ←
-          </span>
-          <span style={{ fontWeight: 600, fontSize: 13 }}>Лимиты по ресайзам</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px' }}>
+            <span
+              onClick={() => setScreen('main')}
+              style={{
+                cursor: 'pointer',
+                fontSize: 18,
+                lineHeight: 1,
+                color: 'var(--figma-color-text-secondary)',
+                userSelect: 'none',
+                padding: '0 4px',
+              }}
+            >
+              ←
+            </span>
+            <span style={{ fontWeight: 600, fontSize: 13 }}>Лимиты по ресайзам</span>
+          </div>
+          <div style={{ padding: '0 12px 6px' }}>
+            <SearchInput value={search} onChange={setSearch} />
+          </div>
         </div>
 
-        {/* Search + tree */}
-        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 12 }}>
-          <SearchInput value={search} onChange={setSearch} />
-          <VerticalSpace space="small" />
+        {/* Tree */}
+        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '0 12px 12px' }}>
           {filteredTree.length > 0 ? (
             filteredTree.map((node, i) => (
               <TreeNodeView
