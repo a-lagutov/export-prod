@@ -35,7 +35,7 @@ npm run build     # Full build: app/figma.ts + app/index.tsx → dist/ (NODE_ENV
 npm run watch     # Watch mode: rebuilds both app/figma.ts and app/index.tsx on changes (NODE_ENV=development)
 ```
 
-Linting and formatting are configured via ESLint + Prettier with a Husky pre-commit hook. Run `npm run prepare` once after cloning to activate the hook.
+Linting and formatting are enforced via ESLint + Prettier through a Husky pre-commit hook that runs `lint-staged`. Run `npm run prepare` once after cloning to activate the hook. Staged `ts`/`tsx` files run `eslint --fix` + `prettier --write`; staged `js`/`json`/`css`/`md` files run `prettier --write`.
 
 ## Environment Variables
 
@@ -274,9 +274,10 @@ The workflow builds the plugin and attaches the ZIP (`dist/`) to the GitHub rele
 - `@create-figma-plugin/utilities` v4 — `emit`/`on` (type-safe cross-thread messaging using `[name, ...args]` array format). Used in both code thread modules and `app/index.tsx`. **Do NOT use `showUI` from utilities** — it wraps `__html__` inside a `<script>` tag, which breaks because Figma provides `__html__` as a full HTML document. Use `figma.showUI(__html__, options)` directly in `app/figma.ts` instead.
 - `@figma/plugin-typings` — TypeScript types for Figma Plugin API
 - `esbuild` — Bundler
+- `eslint-plugin-jsdoc` — ESLint plugin that enforces JSDoc presence and structure (`jsdoc/require-jsdoc`, `jsdoc/require-param`, `jsdoc/require-returns`, `jsdoc/require-description`)
 
 ## TypeScript / IDE Notes
 
 - `tsconfig.json` uses `"moduleResolution": "bundler"` — required for VS Code to resolve modern packages (preact, jszip, etc.) that use the `exports` field in `package.json`. Do not change this to `node`.
 - `Uint8Array` received from the Figma plugin bridge has type `Uint8Array<ArrayBufferLike>`, which is not directly assignable to `BlobPart`. Cast with `as BlobPart` where needed (e.g. `new Blob([bytes as BlobPart])`).
-- After cloning, run `npm run prepare` to install the Husky pre-commit hook (lint-staged + ESLint + Prettier check).
+- After cloning, run `npm run prepare` to install the Husky pre-commit hook (runs `lint-staged` on commit).
