@@ -41,10 +41,6 @@ envDefine['__VERSION__'] = JSON.stringify(version)
 envDefine['__DEV__'] = JSON.stringify(true)
 envDefine['__LOG_SERVER__'] = JSON.stringify(env.LOG_SERVER ?? '')
 
-const gifWorkerContent = fs.readFileSync(
-  path.join(root, 'node_modules/gif.js/dist/gif.worker.js'),
-  'utf-8',
-)
 
 /**
  * Writes the inlined ui.html from in-memory JS and CSS strings.
@@ -128,7 +124,6 @@ async function watch() {
       'react/jsx-runtime': path.resolve(root, 'node_modules/preact/jsx-runtime/dist/jsxRuntime.module.js'),
     },
     define: {
-      __GIF_WORKER_CONTENT__: JSON.stringify(gifWorkerContent),
       ...envDefine,
     },
     loader: { '.css': 'css' },

@@ -127,11 +127,10 @@ src/
     lib/
       figma.ts                            isSection, isFrame, fitSectionToChildren, resizeSectionOnly, setSectionFill
       compression.ts                      pngBytesToCanvas, convertFrame, binary-search compression
-      gif.ts                              assembleGif, GIF worker URL (declares __GIF_WORKER_CONTENT__)
+      gif.ts                              assembleGif, GIF encoding via modern-gif (main thread, no worker)
       preview.ts                          escHtml, buildPreviewHtml
       declension.ts                       Russian noun declension helper
     types/
-      gif.d.ts                            ambient type declaration for gif.js npm package
     config/
       index.ts                            all tunable constants + FORMATS
       strings.ts                          centralised string constants for all user-visible UI text
@@ -149,8 +148,7 @@ src/
 
 1. Cleans `dist/` entirely before building to avoid stale artifacts.
 2. esbuild bundles `src/app/figma.ts` → `dist/code.js` with full minification (`minify: true`).
-3. Reads `gif.worker.js` from `node_modules/gif.js/dist/` and passes its content to esbuild via `define` as `__GIF_WORKER_CONTENT__` (lazily initialized in the UI via `URL.createObjectURL`)
-4. Loads env files (CRA priority order), injects `POSTHOG_*` vars and `LOG_SERVER` as `__VAR__` constants; also injects `__VERSION__` (from `git describe --tags --abbrev=0`, fallback to `package.json`) and `__DEV__` (`true` in watch mode, `false` in production)
+3. Loads env files (CRA priority order), injects `POSTHOG_*` vars and `LOG_SERVER` as `__VAR__` constants; also injects `__VERSION__` (from `git describe --tags --abbrev=0`, fallback to `package.json`) and `__DEV__` (`true` in watch mode, `false` in production)
 5. esbuild bundles `src/app/index.tsx` in memory (`write: false`) with `minifyWhitespace: true` and `minifySyntax: true` — but **not** `minifyIdentifiers`, because CSS module class names are shortened independently per file, causing collisions (`.t`, `.n`, etc. end up defined multiple times) that break styles. Entry key is named `ui` to preserve output filename. JSX uses `preact/jsx-runtime`; React imports (`react`, `react-dom`, `react/jsx-runtime`) are aliased to their Preact equivalents so React components work out of the box.
 6. Reads JS and CSS from `result.outputFiles` (never written to disk), assembles the HTML wrapper, minifies it with `@minify-html/node` (HTML-level whitespace only; JS and CSS are already minified by esbuild), and writes `dist/ui.html`.
 7. Calls `manifest.js(env)` and writes the result to `dist/manifest.json` (injects `PLUGIN_NAME` → `name`, `POSTHOG_HOST` → `networkAccess.allowedDomains`, `LOG_SERVER` → `networkAccess.devAllowedDomains`)
@@ -174,7 +172,7 @@ Exports: `log`, `warn`, `error`, `info` (thread `ui`). `fromCodeThread` is defin
 At module load time in dev mode, it also:
 
 - Overrides `console.warn` and `console.error` to forward captured output to the server as thread `figma`
-- Patches `HTMLCanvasElement.prototype.getContext` to add `{ willReadFrequently: true }` for all `'2d'` contexts (suppresses the gif.js browser warning)
+- Patches `HTMLCanvasElement.prototype.getContext` to add `{ willReadFrequently: true }` for all `'2d'` contexts (suppresses browser performance warnings)
 
 **Log server** (`scripts/log-server.js`): HTTP server on port 3001, routes entries to:
 
@@ -201,7 +199,7 @@ For GIF: frames at the same Y position are grouped into one animation, sorted le
 
 - **JPG/WebP**: Binary search over quality parameter (0.0–1.0) to hit size limit.
 - **PNG**: Binary search over color quantization levels (2–256) to hit size limit.
-- **GIF**: Binary search over gif.js `quality` parameter (1–30, lower = better).
+- **GIF**: Binary search over modern-gif `maxColors` parameter (2–255, higher = better quality).
 
 Frame processing is sequential (one at a time) to avoid overloading the Figma plugin bridge.
 
@@ -287,7 +285,7 @@ The workflow builds the plugin and attaches the ZIP (`dist/`) to the GitHub rele
 ## Key Dependencies
 
 - `jszip` — ZIP assembly in the browser
-- `gif.js` — GIF encoding with Web Workers (worker script injected via esbuild `define`)
+- `modern-gif` — GIF encoding on the main thread (no Web Worker; Figma sandbox CSP blocks Blob-URL workers)
 - `preact` — UI framework (used via React-compat alias so components can use React imports)
 - `@create-figma-plugin/ui` v4 — Figma-styled UI components (tracks current Figma design system). Used components: `Button`, `Text`, `Muted`, `VerticalSpace`, `Textbox`, `SearchTextbox`, `TextboxNumeric`, `SegmentedControl`, `render`. All inputs use `variant="border"`. `render(Component)(rootEl, props)` mounts the UI.
 - `@create-figma-plugin/utilities` v4 — `emit`/`on` (type-safe cross-thread messaging using `[name, ...args]` array format). Used in both code thread modules and `app/index.tsx`. **Do NOT use `showUI` from utilities** — it wraps `__html__` inside a `<script>` tag, which breaks because Figma provides `__html__` as a full HTML document. Use `figma.showUI(__html__, options)` directly in `app/figma.ts` instead.

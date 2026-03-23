@@ -131,7 +131,7 @@ The screen has a search field and two view modes toggled by icons in the header:
 | ---------- | ---------------------------------------------------- |
 | JPG / WebP | Binary search over `quality` parameter (0–1)         |
 | PNG        | Binary search over color quantization level (2–256)  |
-| GIF        | Binary search over gif.js `quality` parameter (1–30) |
+| GIF        | Binary search over modern-gif `maxColors` parameter (2–255) |
 
 #### ZIP Path Mode
 
@@ -174,8 +174,7 @@ Communication between threads via `emit` / `on` from `@create-figma-plugin/utili
 
 1. Cleans `dist/` before building to avoid stale artifacts.
 2. esbuild: `src/app/figma.ts` → `dist/code.js` (fully minified).
-3. Reads `gif.worker.js` from `node_modules/gif.js/dist/` and passes content via esbuild `define` as `__GIF_WORKER_CONTENT__`
-4. esbuild: `src/app/index.tsx` bundled in memory (`write: false`) with whitespace + syntax minification (identifiers are not mangled to prevent CSS module class-name collisions). JSX via `preact/jsx-runtime`.
+3. esbuild: `src/app/index.tsx` bundled in memory (`write: false`) with whitespace + syntax minification (identifiers are not mangled to prevent CSS module class-name collisions). JSX via `preact/jsx-runtime`.
 5. JS and CSS are read from `result.outputFiles`, assembled into an HTML wrapper, minified by `@minify-html/node`, and written to `dist/ui.html`. No intermediate `ui.js`/`ui.css` files are written to disk.
 6. Calls `manifest.js(env)` and writes result to `dist/manifest.json` (env vars injected into `name`, `networkAccess.allowedDomains`, and `networkAccess.devAllowedDomains`)
 
@@ -186,7 +185,7 @@ Communication between threads via `emit` / `on` from `@create-figma-plugin/utili
 | Package                   | Purpose                               |
 | ------------------------- | ------------------------------------- |
 | `jszip`                   | ZIP assembly in the browser           |
-| `gif.js`                  | GIF encoding via Web Workers          |
+| `modern-gif`              | GIF encoding on the main thread       |
 | `preact`                  | UI framework                          |
 | `@create-figma-plugin/ui` | Figma-styled UI components            |
 | `@figma/plugin-typings`   | TypeScript types for Figma Plugin API |
@@ -322,7 +321,7 @@ xxxx-yyy
 | ---------- | --------------------------------------------------- |
 | JPG / WebP | Бинарный поиск по параметру `quality` (0–1)         |
 | PNG        | Бинарный поиск по уровню квантования цвета (2–256)  |
-| GIF        | Бинарный поиск по параметру `quality` gif.js (1–30) |
+| GIF        | Бинарный поиск по параметру `maxColors` modern-gif (2–255) |
 
 #### Режим путей в ZIP
 
@@ -365,8 +364,7 @@ xxxx-yyy
 
 1. Очищает `dist/` перед сборкой, чтобы не оставалось устаревших артефактов.
 2. esbuild: `src/app/figma.ts` → `dist/code.js` (полная минификация).
-3. Читает `gif.worker.js` из `node_modules/gif.js/dist/` и передаёт содержимое через esbuild `define` как `__GIF_WORKER_CONTENT__`
-4. esbuild: `src/app/index.tsx` бандлируется в памяти (`write: false`) с минификацией пробелов и синтаксиса (имена идентификаторов не сокращаются, чтобы избежать коллизий имён классов CSS-модулей). JSX через `preact/jsx-runtime`.
+3. esbuild: `src/app/index.tsx` бандлируется в памяти (`write: false`) с минификацией пробелов и синтаксиса (имена идентификаторов не сокращаются, чтобы избежать коллизий имён классов CSS-модулей). JSX через `preact/jsx-runtime`.
 5. JS и CSS читаются из `result.outputFiles`, собираются в HTML-обёртку, минифицируются через `@minify-html/node` и записываются в `dist/ui.html`. Промежуточные файлы `ui.js`/`ui.css` на диск не записываются.
 6. Вызывает `manifest.js(env)` и записывает результат в `dist/manifest.json` (env-переменные подставляются в `name`, `networkAccess.allowedDomains` и `networkAccess.devAllowedDomains`)
 
@@ -377,7 +375,7 @@ xxxx-yyy
 | Пакет                     | Назначение                        |
 | ------------------------- | --------------------------------- |
 | `jszip`                   | Сборка ZIP в браузере             |
-| `gif.js`                  | Кодирование GIF через Web Workers |
+| `modern-gif`              | Кодирование GIF в главном потоке  |
 | `preact`                  | UI-фреймворк                      |
 | `@create-figma-plugin/ui` | Компоненты в стиле Figma          |
 | `@figma/plugin-typings`   | TypeScript-типы Figma Plugin API  |

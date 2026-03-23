@@ -74,12 +74,6 @@ async function build() {
   })
   console.log('✓ dist/code.js')
 
-  // 2. Read gif.worker.js content — injected into UI bundle via define
-  const gifWorkerContent = fs.readFileSync(
-    path.join(root, 'node_modules/gif.js/dist/gif.worker.js'),
-    'utf-8',
-  )
-
   // Plugin: @create-figma-plugin/ui uses webpack "!" prefix to skip loaders.
   // Strip the "!" and resolve the CSS path normally.
   const fixFigmaPluginCssImports = {
@@ -109,7 +103,6 @@ async function build() {
       'react/jsx-runtime': path.resolve(root, 'node_modules/preact/jsx-runtime/dist/jsxRuntime.module.js'),
     },
     define: {
-      __GIF_WORKER_CONTENT__: JSON.stringify(gifWorkerContent),
       ...envDefine,
     },
     loader: { '.css': 'css' },
