@@ -1,6 +1,6 @@
 {
   "name": "export-prod",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Figma plugin for batch exporting frames with compression",
   "scripts": {
     "build": "NODE_ENV=production node scripts/build.js",
