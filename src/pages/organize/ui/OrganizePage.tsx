@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { emit, on } from '@create-figma-plugin/utilities'
-import { Button, VerticalSpace, SegmentedControl } from '@create-figma-plugin/ui'
+import { Button, IconWarning16, VerticalSpace, SegmentedControl } from '@create-figma-plugin/ui'
 import { track } from '../../../shared/analytics/index'
 import {
   MODE_BY_FIELDS,
   MODE_BY_PATH,
+  MODE_SECTIONS,
   LABEL_FORMAT,
   LABEL_CHANNEL,
   LABEL_PLATFORM,
@@ -13,7 +14,8 @@ import {
   PLACEHOLDER_CHANNEL,
   PLACEHOLDER_PLATFORM,
   PLACEHOLDER_CREATIVE,
-  BTN_PLACE_FRAMES,
+  MSG_SELECT_FRAMES,
+  MSG_FILL_FIELDS,
   placeBtnLabel,
 } from '../../../shared/config/strings'
 import { SelectionIndicator } from '../../../features/place-sections/ui/components/SelectionIndicator'
@@ -31,7 +33,7 @@ import type { SectionFormat } from '../../../entities/frame/model/types'
 export function OrganizePage() {
   const [sections, setSections] = useState<SectionFormat[]>([])
   const [selectedCount, setSelectedCount] = useState(0)
-  const [inputMode, setInputMode] = useState<'fields' | 'path'>('fields')
+  const [inputMode, setInputMode] = useState<'fields' | 'path' | 'sections'>('fields')
 
   // Fields mode state
   const [format, setFormat] = useState('')
@@ -56,13 +58,16 @@ export function OrganizePage() {
     return () => offs.forEach((off) => off())
   }, [])
 
-  // Derived autocomplete options for fields mode
-  const formatSection = sections.find((s) => s.name.toLowerCase() === format.toLowerCase())
-  const channelOptions = formatSection ? formatSection.channels.map((c) => c.name) : []
-  const channelSection = formatSection?.channels.find((c) => c.name === channel)
-  const platformOptions = channelSection ? channelSection.platforms.map((p) => p.name) : []
-  const platformSection = channelSection?.platforms.find((p) => p.name === platform)
-  const creativeOptions = platformSection ? platformSection.creatives : []
+  // Derived autocomplete options — each field shows all unique values across all sections
+  const channelOptions = [...new Set(sections.flatMap((s) => s.channels.map((c) => c.name)))]
+  const platformOptions = [
+    ...new Set(sections.flatMap((s) => s.channels.flatMap((c) => c.platforms.map((p) => p.name)))),
+  ]
+  const creativeOptions = [
+    ...new Set(
+      sections.flatMap((s) => s.channels.flatMap((c) => c.platforms.flatMap((p) => p.creatives))),
+    ),
+  ]
 
   // Effective values based on mode
   /** Returns the active format/channel/platform/creative values from whichever input mode is selected. */
@@ -75,7 +80,9 @@ export function OrganizePage() {
   }
 
   const { fmt: eFmt, ch: eCh, pl: ePl, cr: eCr } = getEffectiveValues()
-  const canPlace = !!(eFmt && eCh && ePl && eCr && selectedCount > 0)
+  // In "sections" mode placement is done via the + buttons in the panel, not the bottom button
+  const canPlace = inputMode !== 'sections' && !!(eFmt && eCh && ePl && eCr && selectedCount > 0)
+  const showBottomBar = inputMode !== 'sections'
 
   /**
    * Clears the previous result, tracks the analytics event, and emits `place-frames` to the code thread.
@@ -98,83 +105,126 @@ export function OrganizePage() {
   }
 
   return (
-    <div style={{ padding: 12, fontFamily: 'Inter, system-ui, sans-serif', fontSize: 12 }}>
-      {/* Selection indicator */}
-      <SelectionIndicator selectedCount={selectedCount} />
-
-      {/* Input mode toggle */}
-      <div class="seg-full">
-        <SegmentedControl
-          value={inputMode}
-          options={[
-            { value: 'fields', children: MODE_BY_FIELDS },
-            { value: 'path', children: MODE_BY_PATH },
-          ]}
-          onValueChange={setInputMode}
-        />
-      </div>
-      <VerticalSpace space="small" />
-
-      {/* Inputs */}
-      {inputMode === 'fields' ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <PathField
-            label={LABEL_FORMAT}
-            value={format}
-            onChange={(v) => {
-              setFormat(v)
-              setChannel('')
-              setPlatform('')
-              setCreative('')
-            }}
-            options={['JPG', 'PNG', 'WEBP', 'GIF']}
-            placeholder={PLACEHOLDER_FORMAT}
-          />
-          <PathField
-            label={LABEL_CHANNEL}
-            value={channel}
-            onChange={(v) => {
-              setChannel(v)
-              setPlatform('')
-              setCreative('')
-            }}
-            options={channelOptions}
-            placeholder={PLACEHOLDER_CHANNEL}
-          />
-          <PathField
-            label={LABEL_PLATFORM}
-            value={platform}
-            onChange={(v) => {
-              setPlatform(v)
-              setCreative('')
-            }}
-            options={platformOptions}
-            placeholder={PLACEHOLDER_PLATFORM}
-          />
-          <PathField
-            label={LABEL_CREATIVE}
-            value={creative}
-            onChange={setCreative}
-            options={creativeOptions}
-            placeholder={PLACEHOLDER_CREATIVE}
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: 12,
+      }}
+    >
+      {/* Fixed top: indicator + mode toggle */}
+      <div style={{ padding: '12px 12px 0' }}>
+        <SelectionIndicator />
+        <div class="seg-full">
+          <SegmentedControl
+            value={inputMode}
+            options={[
+              { value: 'fields', children: MODE_BY_FIELDS },
+              { value: 'path', children: MODE_BY_PATH },
+              { value: 'sections', children: MODE_SECTIONS },
+            ]}
+            onValueChange={setInputMode}
           />
         </div>
-      ) : (
-        <PathInput value={pathInput} onChange={setPathInput} sections={sections} />
+        <VerticalSpace space="small" />
+      </div>
+
+      {/* Sections mode: full-width panel fills remaining space */}
+      {inputMode === 'sections' && (
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <SectionTreePanel
+            sections={sections}
+            onPlace={doPlace}
+            selectedCount={selectedCount}
+            inline
+          />
+        </div>
       )}
 
-      {/* Place button */}
-      <VerticalSpace space="small" />
-      <Button fullWidth onClick={() => doPlace(eFmt, eCh, ePl, eCr)} disabled={!canPlace}>
-        {selectedCount > 0 ? placeBtnLabel(selectedCount) : BTN_PLACE_FRAMES}
-      </Button>
+      {/* Fields / path mode: scrollable content */}
+      {inputMode !== 'sections' && (
+        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '0 12px 12px' }}>
+          {inputMode === 'fields' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <PathField
+                label={LABEL_FORMAT}
+                value={format}
+                onChange={setFormat}
+                options={['JPG', 'PNG', 'WEBP', 'GIF']}
+                placeholder={PLACEHOLDER_FORMAT}
+              />
+              <PathField
+                label={LABEL_CHANNEL}
+                value={channel}
+                onChange={setChannel}
+                options={channelOptions}
+                placeholder={PLACEHOLDER_CHANNEL}
+              />
+              <PathField
+                label={LABEL_PLATFORM}
+                value={platform}
+                onChange={setPlatform}
+                options={platformOptions}
+                placeholder={PLACEHOLDER_PLATFORM}
+              />
+              <PathField
+                label={LABEL_CREATIVE}
+                value={creative}
+                onChange={setCreative}
+                options={creativeOptions}
+                placeholder={PLACEHOLDER_CREATIVE}
+              />
+            </div>
+          )}
 
-      {/* Result */}
-      {result && <PlaceResultMessage result={result} />}
+          {inputMode === 'path' && (
+            <PathInput value={pathInput} onChange={setPathInput} sections={sections} />
+          )}
 
-      {/* Section tree with add buttons */}
-      {sections.length > 0 && (
-        <SectionTreePanel sections={sections} onPlace={doPlace} selectedCount={selectedCount} />
+          {result && <PlaceResultMessage result={result} />}
+        </div>
+      )}
+
+      {/* Place button or warning — pinned to bottom; hidden in sections mode */}
+      {showBottomBar && (
+        <div
+          style={{
+            padding: '12px 16px 16px',
+            background: 'var(--figma-color-bg)',
+            borderTop: '1px solid var(--figma-color-border)',
+          }}
+        >
+          <div class="export-btn-wrap">
+            <style>{`.export-btn-wrap button { padding: 12px 16px !important; font-size: 13px !important; height: auto !important; }`}</style>
+            {canPlace ? (
+              <Button fullWidth onClick={() => doPlace(eFmt, eCh, ePl, eCr)}>
+                {placeBtnLabel(selectedCount)}
+              </Button>
+            ) : (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '12px 16px',
+                  borderRadius: 'var(--border-radius-6)',
+                  background: 'var(--figma-color-bg-warning)',
+                  fontSize: 13,
+                }}
+              >
+                <span style={{ color: 'var(--figma-color-icon-onwarning)', display: 'flex' }}>
+                  <IconWarning16 />
+                </span>
+                <span style={{ color: 'var(--figma-color-text-onwarning)' }}>
+                  {selectedCount === 0 ? MSG_SELECT_FRAMES : MSG_FILL_FIELDS}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )

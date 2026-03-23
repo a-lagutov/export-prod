@@ -30,7 +30,7 @@ export const DECLENSION_FILE = ['файл', 'файла', 'файлов'] as con
  * @param count
  */
 export const exportBtnLabel = (count: number) =>
-  `Экспорт (${count} ${declension(count, ...DECLENSION_FILE)})`
+  `Экспорт · ${count} ${declension(count, ...DECLENSION_FILE)}`
 
 // ── Progress messages ──────────────────────────────────────────────────────────
 
@@ -66,6 +66,7 @@ export const MSG_NOTHING_FOUND = 'Ничего не найдено'
 
 export const HEADER_RESIZE = 'Ресайз'
 export const HEADER_LIMIT = 'Лимит'
+export const HEADER_SIZE = 'Размер'
 
 // ── Platform limits section ────────────────────────────────────────────────────
 
@@ -106,13 +107,16 @@ export const PLACEHOLDER_FORMAT = 'JPG, PNG, WEBP или GIF'
 export const PLACEHOLDER_CHANNEL = 'например: 5_Context_Media'
 export const PLACEHOLDER_PLATFORM = 'например: VK, TG, Bigo'
 export const PLACEHOLDER_CREATIVE = 'например: 1234-card'
-export const PLACEHOLDER_PATH = 'GIF/Канал/Площадка/Креатив'
+export const PLACEHOLDER_PATH = ''
 
 // ── Organize (Place) page ──────────────────────────────────────────────────────
 
 export const BTN_PLACE_FRAMES = 'Поместить в секции'
 export const MODE_BY_FIELDS = 'По полям'
 export const MODE_BY_PATH = 'Путь'
+export const MODE_SECTIONS = 'Секции'
+export const MSG_FILL_FIELDS = 'Заполните все поля для размещения'
+export const HEADER_PATH = 'Путь'
 
 /** Russian declension forms for "фрейм". Spread into `declension(count, ...DECLENSION_FRAME)`. */
 export const DECLENSION_FRAME = ['фрейм', 'фрейма', 'фреймов'] as const

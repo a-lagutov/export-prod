@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
-import { TextboxNumeric } from '@create-figma-plugin/ui'
-import { SUFFIX_MB, PLACEHOLDER_ZERO } from '../../../../shared/config/strings'
+import { NumInput } from '../../../../shared/ui/NumInput'
+import { SUFFIX_MB } from '../../../../shared/config/strings'
 import type { TreeNode } from '../../../../entities/frame/model/types'
 
 /**
@@ -54,13 +54,12 @@ export function FrameRow({
           </span>
         )}
       </span>
-      <div ref={containerRef} style={{ flexShrink: 0, width: 64 }}>
-        <TextboxNumeric
+      <div style={{ flexShrink: 0, width: 72 }}>
+        <NumInput
           value={frameSizes[key] ?? ''}
-          onValueInput={(v) => onFrameSizeChange(key, v)}
+          onChange={(v) => onFrameSizeChange(key, v)}
           suffix={SUFFIX_MB}
-          placeholder={PLACEHOLDER_ZERO}
-          validateOnBlur={(v) => (v === null || v <= 0 ? null : v)}
+          containerRef={containerRef}
         />
       </div>
     </div>

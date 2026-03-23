@@ -33,7 +33,12 @@ export function CreativeRow({
       }}
     >
       <span
-        style={{ flex: 1, color: 'var(--figma-color-text-tertiary)', fontSize: 10, paddingLeft: 2 }}
+        style={{
+          flex: 1,
+          color: 'var(--figma-color-text-secondary)',
+          fontSize: 11,
+          paddingLeft: 2,
+        }}
       >
         {name}
       </span>

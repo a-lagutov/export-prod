@@ -43,6 +43,10 @@ function Root() {
         .segmented_control_segmentedControl label:not(:has(.segmented_control_input:checked)):hover { background-color: var(--figma-color-bg-hover); }
         .segmented_control_segmentedControl label:not(:has(.segmented_control_input:checked)):active { background-color: var(--figma-color-bg-selected); }
         .seg-full .segmented_control_segmentedControl { width: 100%; }
+        .num-input-suffix input { padding-right: 30px !important; }
+        .path-input-wrap [class*="searchIcon"] { display: none !important; }
+        .path-input-wrap input { padding-left: 8px !important; }
+        .path-field-input input { height: var(--space-32) !important; }
         .seg-full .segmented_control_segmentedControl label { flex: 1; }
         .seg-full .segmented_control_box { width: 100%; justify-content: center; }
         input[type="text"] { outline: none; }

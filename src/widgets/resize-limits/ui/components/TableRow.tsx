@@ -1,13 +1,13 @@
-import { useState, useRef } from 'react'
-import { TextboxNumeric } from '@create-figma-plugin/ui'
-import { TagBadge } from '../../../../shared/ui/TagBadge'
-import { SUFFIX_MB, PLACEHOLDER_ZERO } from '../../../../shared/config/strings'
+import { useRef } from 'react'
+import { NumInput } from '../../../../shared/ui/NumInput'
+import { FlatTableRow } from '../../../../shared/ui/FlatTableRow'
+import { SUFFIX_MB } from '../../../../shared/config/strings'
 import type { FlatRow } from '../../../../entities/frame/model/tree'
 
 /**
- * A single row in the table view of the `Resizes` screen.
- * Displays format badge, creative name (with full path in `title`), resize name, and a limit input.
- * Clicking anywhere on the row focuses the numeric input.
+ * A single row in the resize-limits table view.
+ * Uses the shared `FlatTableRow` layout; last cell is a numeric weight-limit input.
+ * Clicking the row focuses the input.
  * @param root0
  * @param root0.row
  * @param root0.frameSizes
@@ -23,64 +23,37 @@ export function TableRow({
   onFrameSizeChange: (key: string, value: string) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [hovered, setHovered] = useState(false)
-
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '3px 12px',
-        background: hovered ? 'var(--figma-color-bg-hover)' : 'transparent',
-        cursor: 'default',
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+    <FlatTableRow
+      format={row.formatTag}
+      channel={row.channel}
+      platform={row.platform}
+      creative={row.creative}
       onClick={() => containerRef.current?.querySelector('input')?.focus()}
-    >
-      <div style={{ flexShrink: 0 }}>
-        <TagBadge format={row.formatTag} />
-      </div>
-      <span
-        style={{
-          flex: 1,
-          fontSize: 11,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          minWidth: 0,
-          color: 'var(--figma-color-text)',
-        }}
-        title={`${row.channel} › ${row.platform} › ${row.creative}`}
-      >
-        {row.creative}
-      </span>
-      <span
-        style={{
-          width: 64,
-          flexShrink: 0,
-          fontSize: 11,
-          color: 'var(--figma-color-text-secondary)',
-          textAlign: 'right',
-        }}
-      >
-        {row.frameName}
-        {row.gifFrameInfo && (
-          <span style={{ fontSize: 9, marginLeft: 2, color: 'var(--figma-color-text-tertiary)' }}>
-            {row.gifFrameInfo}
+      extraCell={
+        <span
+          style={{ width: 72, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 1 }}
+        >
+          <span style={{ fontSize: 11, color: 'var(--figma-color-text-secondary)' }}>
+            {row.frameName}
           </span>
-        )}
-      </span>
-      <div ref={containerRef} style={{ flexShrink: 0, width: 72 }}>
-        <TextboxNumeric
-          value={frameSizes[row.key] ?? ''}
-          onValueInput={(v) => onFrameSizeChange(row.key, v)}
-          suffix={SUFFIX_MB}
-          placeholder={PLACEHOLDER_ZERO}
-          validateOnBlur={(v) => (v === null || v <= 0 ? null : v)}
-        />
-      </div>
-    </div>
+          {row.gifFrameInfo && (
+            <span style={{ fontSize: 10, color: 'var(--figma-color-text-tertiary)' }}>
+              {row.gifFrameInfo}
+            </span>
+          )}
+        </span>
+      }
+      lastCell={
+        <div style={{ flexShrink: 0, width: 72 }}>
+          <NumInput
+            value={frameSizes[row.key] ?? ''}
+            onChange={(v) => onFrameSizeChange(row.key, v)}
+            suffix={SUFFIX_MB}
+            containerRef={containerRef}
+          />
+        </div>
+      }
+    />
   )
 }

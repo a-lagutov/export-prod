@@ -26,7 +26,14 @@ export function GifDelayRow({ value, onChange }: { value: string; onChange: (v: 
       onClick={() => containerRef.current?.querySelector('input')?.focus()}
     >
       <Text>{LABEL_GIF_DELAY}</Text>
-      <NumInput value={value} onChange={onChange} suffix={SUFFIX_SEC} containerRef={containerRef} />
+      <div style={{ width: 54 }}>
+        <NumInput
+          value={value}
+          onChange={onChange}
+          suffix={SUFFIX_SEC}
+          containerRef={containerRef}
+        />
+      </div>
     </div>
   )
 }

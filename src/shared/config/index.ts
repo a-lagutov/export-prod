@@ -1,6 +1,6 @@
 // ── Plugin window ─────────────────────────────────────────────────────────────
 
-export const WINDOW_WIDTH = 400
+export const WINDOW_WIDTH = 500
 export const WINDOW_HEIGHT = 450
 export const WINDOW_MIN_HEIGHT = 200
 

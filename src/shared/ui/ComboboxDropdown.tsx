@@ -1,6 +1,9 @@
 /**
  * Floating dropdown list of autocomplete options positioned below the trigger element.
  * Uses `onMouseDown` instead of `onClick` to fire before the input's `onBlur` event.
+ * @param root0
+ * @param root0.options
+ * @param root0.onSelect
  */
 export function ComboboxDropdown({
   options,
@@ -29,7 +32,10 @@ export function ComboboxDropdown({
       {options.map((o) => (
         <div
           key={o}
-          onMouseDown={() => onSelect(o)}
+          onMouseDown={(e) => {
+            e.preventDefault()
+            onSelect(o)
+          }}
           style={{
             padding: '6px 8px',
             fontSize: 11,

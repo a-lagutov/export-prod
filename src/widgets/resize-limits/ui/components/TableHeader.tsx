@@ -1,55 +1,35 @@
-import {
-  LABEL_FORMAT,
-  LABEL_CREATIVE,
-  HEADER_RESIZE,
-  HEADER_LIMIT,
-} from '../../../../shared/config/strings'
+import { FlatTableHeader } from '../../../../shared/ui/FlatTableHeader'
+import { HEADER_LIMIT, HEADER_SIZE } from '../../../../shared/config/strings'
 
-/** Sticky column header row for the table view: Format / Creative / Resize / Limit. */
+/** Sticky column header for the resize-limits table view. Extra column: frame size. Last column: weight limit. */
 export function TableHeader() {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '3px 12px',
-        position: 'sticky',
-        top: 0,
-        background: 'var(--figma-color-bg)',
-        zIndex: 1,
-        borderBottom: '1px solid var(--figma-color-border)',
-      }}
-    >
-      <span style={{ width: 36, fontSize: 10, color: 'var(--figma-color-text-tertiary)' }}>
-        {LABEL_FORMAT}
-      </span>
-      <span
-        style={{ flex: 1, fontSize: 10, color: 'var(--figma-color-text-tertiary)', minWidth: 0 }}
-      >
-        {LABEL_CREATIVE}
-      </span>
-      <span
-        style={{
-          width: 64,
-          fontSize: 10,
-          color: 'var(--figma-color-text-tertiary)',
-          textAlign: 'right',
-        }}
-      >
-        {HEADER_RESIZE}
-      </span>
-      <span
-        style={{
-          width: 48,
-          fontSize: 10,
-          color: 'var(--figma-color-text-tertiary)',
-          textAlign: 'right',
-        }}
-      >
-        {HEADER_LIMIT}
-      </span>
-      <span style={{ width: 20 }} />
-    </div>
+    <FlatTableHeader
+      extraCell={
+        <span
+          style={{
+            width: 72,
+            fontSize: 10,
+            color: 'var(--figma-color-text-tertiary)',
+            flexShrink: 0,
+          }}
+        >
+          {HEADER_SIZE}
+        </span>
+      }
+      lastCell={
+        <span
+          style={{
+            width: 72,
+            fontSize: 10,
+            color: 'var(--figma-color-text-tertiary)',
+            flexShrink: 0,
+            textAlign: 'right',
+          }}
+        >
+          {HEADER_LIMIT}
+        </span>
+      }
+    />
   )
 }

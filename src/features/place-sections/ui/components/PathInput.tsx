@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Textbox } from '@create-figma-plugin/ui'
+import { SearchTextbox } from '@create-figma-plugin/ui'
 import { ComboboxDropdown } from '../../../../shared/ui/ComboboxDropdown'
 import {
   LABEL_FORMAT,
@@ -70,25 +70,35 @@ export function PathInput({
   const parts = value.split('/')
 
   /**
-   * Applies a selected autocomplete completion and appends "/" if the path is not yet fully specified.
+   * Applies a selected autocomplete completion and appends "/" to prompt the next segment.
+   * Closes the dropdown only when all 4 path segments are filled.
+   * `e.preventDefault()` in `ComboboxDropdown` keeps focus on the input throughout.
    * @param completion
    */
   function handleSelect(completion: string) {
-    // If less than 4 parts, append "/" to prompt next segment
     const completionParts = completion.split('/')
-    onChange(completionParts.length < 4 ? completion + '/' : completion)
-    setOpen(false)
+    if (completionParts.length < 4) {
+      onChange(completion + '/')
+    } else {
+      onChange(completion)
+      setOpen(false)
+    }
   }
 
   return (
     <div style={{ position: 'relative' }}>
-      <Textbox
-        value={value}
-        placeholder={PLACEHOLDER_PATH}
-        onValueInput={onChange}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-      />
+      <div class="path-input-wrap">
+        <SearchTextbox
+          value={value}
+          placeholder={PLACEHOLDER_PATH}
+          onValueInput={onChange}
+          onFocus={() => setOpen(true)}
+          onBlur={() => {
+            blurTimerRef.current = setTimeout(() => setOpen(false), 150)
+          }}
+          clearOnEscapeKeyDown
+        />
+      </div>
       {/* Segment hint */}
       {parts.length < 5 && (
         <div

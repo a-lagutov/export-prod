@@ -4,6 +4,11 @@ import type { SectionFormat } from '../../../../entities/frame/model/types'
 /**
  * Scrollable tree of existing page sections filtered by a search query.
  * Renders `SectionFormatNode` for each visible format section.
+ * @param root0
+ * @param root0.sections
+ * @param root0.searchQuery
+ * @param root0.onPlace
+ * @param root0.selectedCount
  */
 export function SectionTree({
   sections,
@@ -20,16 +25,7 @@ export function SectionTree({
   const matches = (name: string) => !q || name.toLowerCase().includes(q)
 
   return (
-    <div
-      style={{
-        maxHeight: 220,
-        overflowY: 'auto',
-        border: '1px solid var(--figma-color-border)',
-        borderRadius: 6,
-        padding: '4px 0',
-        fontSize: 11,
-      }}
-    >
+    <div>
       {sections.map((fmt) => {
         const visibleChannels = fmt.channels.filter(
           (ch) =>

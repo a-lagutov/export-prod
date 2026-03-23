@@ -2,8 +2,16 @@ import { useState } from 'react'
 import { SectionPlatformNode } from './SectionPlatformNode'
 
 /**
- * Collapsible channel-level node in the section tree. Collapsed by default.
+ * Collapsible channel-level node in the section tree. Expanded by default.
  * Expands to show `SectionPlatformNode` children for each platform.
+ * @param root0
+ * @param root0.ch
+ * @param root0.ch.name
+ * @param root0.ch.platforms
+ * @param root0.formatName
+ * @param root0.matches
+ * @param root0.onPlace
+ * @param root0.selectedCount
  */
 export function SectionChannelNode({
   ch,
@@ -18,9 +26,9 @@ export function SectionChannelNode({
   onPlace: (fmt: string, ch: string, pl: string, cr: string) => void
   selectedCount: number
 }) {
-  const [collapsed, setCollapsed] = useState(true)
+  const [collapsed, setCollapsed] = useState(false)
   return (
-    <div style={{ paddingLeft: 14 }}>
+    <div style={{ paddingLeft: 12 }}>
       <div
         class="tree-header"
         onClick={() => setCollapsed(!collapsed)}
@@ -28,7 +36,8 @@ export function SectionChannelNode({
           display: 'flex',
           alignItems: 'center',
           gap: 4,
-          padding: '3px 8px 3px 0',
+          padding: '3px 4px',
+          borderRadius: 4,
           cursor: 'pointer',
           userSelect: 'none',
         }}
@@ -45,7 +54,7 @@ export function SectionChannelNode({
         >
           ▼
         </span>
-        <span style={{ color: 'var(--figma-color-text)' }}>{ch.name}</span>
+        <span style={{ fontSize: 12, color: 'var(--figma-color-text)' }}>{ch.name}</span>
       </div>
       {!collapsed &&
         ch.platforms.map((pl) => (
