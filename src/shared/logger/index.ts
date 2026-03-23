@@ -57,6 +57,19 @@ if (__DEV__ && __LOG_SERVER__) {
     send('error', 'figma', String(msg), args.length ? args : undefined)
   }
 
+  // Capture uncaught exceptions and unhandled promise rejections
+  window.addEventListener('error', (event) => {
+    send('error', 'figma', event.message, {
+      filename: event.filename,
+      line: event.lineno,
+      col: event.colno,
+    })
+  })
+
+  window.addEventListener('unhandledrejection', (event) => {
+    send('error', 'figma', String(event.reason))
+  })
+
   // Fix gif.js: canvas.getContext('2d') without willReadFrequently triggers a browser warning
   const _getContext = HTMLCanvasElement.prototype.getContext
   // @ts-expect-error — overload signatures don't cover the generic case

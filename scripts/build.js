@@ -56,9 +56,9 @@ envDefine['__DEV__'] = JSON.stringify(mode === 'development')
 envDefine['__LOG_SERVER__'] = JSON.stringify(env.LOG_SERVER ?? '')
 
 async function build() {
-  // 1. Bundle code.ts → dist/code.js
+  // 1. Bundle app/figma.ts → dist/code.js
   await esbuild.build({
-    entryPoints: [path.join(root, 'src/code.ts')],
+    entryPoints: [path.join(root, 'src/app/figma.ts')],
     bundle: true,
     outfile: path.join(root, 'dist/code.js'),
     target: 'es2017',
@@ -82,13 +82,18 @@ async function build() {
     },
   }
 
-  // 3. Bundle ui.tsx → dist/ui.js (and dist/ui.css if any CSS imports exist)
+  // 3. Bundle app/index.tsx → dist/ui.js (and dist/ui.css if any CSS imports exist)
   await esbuild.build({
-    entryPoints: [path.join(root, 'src/ui.tsx')],
+    entryPoints: { ui: path.join(root, 'src/app/index.tsx') },
     bundle: true,
     outdir: path.join(root, 'dist'),
     jsx: 'automatic',
     jsxImportSource: 'preact',
+    alias: {
+      react: path.resolve(root, 'node_modules/preact/compat/dist/compat.module.js'),
+      'react-dom': path.resolve(root, 'node_modules/preact/compat/dist/compat.module.js'),
+      'react/jsx-runtime': path.resolve(root, 'node_modules/preact/jsx-runtime/dist/jsxRuntime.module.js'),
+    },
     define: {
       __GIF_WORKER_CONTENT__: JSON.stringify(gifWorkerContent),
       ...envDefine,

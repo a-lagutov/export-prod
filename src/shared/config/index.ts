@@ -62,6 +62,12 @@ export const GIF_DELAY_DEFAULT = '3'
 /** Fallback delay in milliseconds if the input is invalid */
 export const GIF_DELAY_FALLBACK_MS = 3000
 
+// ── Formats ───────────────────────────────────────────────────────────────────
+
+/** Supported export formats — defines valid top-level section names */
+export const FORMATS = ['jpg', 'png', 'webp', 'gif'] as const
+export type Format = (typeof FORMATS)[number]
+
 // ── Misc ──────────────────────────────────────────────────────────────────────
 
 /** Debounce delay before re-scanning after a document change */

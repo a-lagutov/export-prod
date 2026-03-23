@@ -17,8 +17,8 @@ In Figma: **Plugins → Development → Import plugin from manifest** → select
 ### Development
 
 ```bash
-npm run watch   # Watch mode: rebuilds code.ts + ui.tsx on changes (NODE_ENV=development)
-npm run build   # Full build (code.ts + ui.tsx → dist/, NODE_ENV=production)
+npm run watch   # Watch mode: rebuilds app/figma.ts + app/index.tsx on changes (NODE_ENV=development)
+npm run build   # Full build (app/figma.ts + app/index.tsx → dist/, NODE_ENV=production)
 ```
 
 #### Environment variables
@@ -95,7 +95,7 @@ Layout rules:
 - Frames within a creative are stacked **vertically** (GIF slides — horizontally).
 - New creative sections are placed to the **right** of existing ones within a platform.
 - New platform / channel sections are placed **below** existing ones.
-- All sections are resized bottom-up (creative → platform → channel → format) to tightly wrap their content with configurable padding (see `src/plugin-config.ts`).
+- All sections are resized bottom-up (creative → platform → channel → format) to tightly wrap their content with configurable padding (see `src/shared/config/index.ts`).
 
 ### Export
 
@@ -133,21 +133,38 @@ A segmented control allows choosing the folder structure in the ZIP:
 
 ### Architecture
 
-Two-thread Figma plugin model:
+Two-thread Figma plugin model with Feature-Sliced Design:
 
 | File | Thread | Role |
 |------|--------|------|
-| `src/code.ts` | Main thread (sandbox) | Page tree scanning, PNG export, frame renaming |
-| `src/ui.tsx` | UI thread (iframe, Preact) | Format conversion, GIF assembly, ZIP building, interface |
-| `src/plugin-config.ts` | — | Central config: window size, layout constants, compression parameters |
+| `src/app/figma.ts` | Main thread (sandbox) | Entry point: `showUI`, registers feature handlers, page-level Figma events |
+| `src/features/export-frames/api/` | Main thread | Export handlers: scan, rename, export pipeline, documentchange debounce |
+| `src/features/place-sections/api/` | Main thread | Place/align handlers: create sections, position frames |
+| `src/entities/frame/api/` | Main thread | `scanPage()`, `getSectionsHierarchy()`, shared `exportItems` state |
+| `src/shared/lib/figma.ts` | Main thread | `isSection`, `isFrame`, `fitSectionToChildren`, `resizeSectionOnly`, `setSectionFill` |
+| `src/app/index.tsx` | UI thread (iframe, Preact) | Entry point — mounts `Root`, contains global CSS |
+| `src/pages/export/ui/ExportPage.tsx` | — | Export tab — screen state, calls `useExport()` |
+| `src/pages/organize/ui/OrganizePage.tsx` | — | Place tab component |
+| `src/widgets/resize-limits/ui/` | — | Per-frame size limits sub-screen (tree/table) + components |
+| `src/widgets/platform-limits/ui/` | — | Per-format/platform limits section + `FormatRow`, `PlatformRow`, `GifDelayRow` |
+| `src/widgets/section-tree/ui/` | — | Section tree panel + node components |
+| `src/features/export-frames/model/useExport.ts` | — | Custom hook: all export state, effects, and handlers |
+| `src/features/export-frames/ui/SetupGuide.tsx` | — | Empty-state setup instructions |
+| `src/features/place-sections/ui/components/` | — | `SelectionIndicator`, `PlaceResultMessage`, `PathField`, `PathInput` |
+| `src/entities/frame/model/` | — | Frame/tree types and tree filtering utilities |
+| `src/shared/ui/` | — | Shared UI: `TagBadge`, `NumInput`, `ProgressBar`, `TabBar`, `ResizeHandle`, `ComboboxDropdown` |
+| `src/shared/lib/` | — | Pure utilities: compression, GIF assembly, HTML preview, declension, Figma helpers |
+| `src/shared/config/index.ts` | — | Central config: window size, layout constants, compression parameters, `FORMATS` |
+| `src/shared/analytics/index.ts` | — | PostHog analytics |
+| `src/shared/logger/index.ts` | — | Dev-only log forwarder |
 
-Communication between threads via `postMessage` / `figma.ui.postMessage`.
+Communication between threads via `emit` / `on` from `@create-figma-plugin/utilities`.
 
 #### Build Process (`scripts/build.js`)
 
-1. esbuild: `src/code.ts` → `dist/code.js`
+1. esbuild: `src/app/figma.ts` → `dist/code.js`
 2. Reads `gif.worker.js` from `node_modules/gif.js/dist/` and passes content via esbuild `define` as `__GIF_WORKER_CONTENT__`
-3. esbuild: `src/ui.tsx` → `dist/ui.js` + `dist/ui.css` (JSX via preact/jsx-runtime)
+3. esbuild: `src/app/index.tsx` → `dist/ui.js` + `dist/ui.css` (JSX via preact/jsx-runtime)
 4. Inline JS and CSS into `dist/ui.html` (Figma doesn't resolve external files)
 5. Calls `manifest.js(env)` and writes result to `dist/manifest.json` (env vars injected into `name`, `networkAccess.allowedDomains`, and `networkAccess.devAllowedDomains`)
 
@@ -179,8 +196,8 @@ Figma-плагин для пакетного экспорта фреймов в 
 ### Разработка
 
 ```bash
-npm run watch   # Watch-режим: пересборка code.ts + ui.tsx при изменениях (NODE_ENV=development)
-npm run build   # Полная сборка (code.ts + ui.tsx → dist/, NODE_ENV=production)
+npm run watch   # Watch-режим: пересборка app/figma.ts + app/index.tsx при изменениях (NODE_ENV=development)
+npm run build   # Полная сборка (app/figma.ts + app/index.tsx → dist/, NODE_ENV=production)
 ```
 
 #### Переменные окружения
@@ -257,7 +274,7 @@ xxxx-yyy
 - Фреймы внутри креатива укладываются **вертикально** (кадры GIF — горизонтально).
 - Новые секции креатива размещаются **правее** существующих внутри площадки.
 - Новые секции площадки / канала размещаются **ниже** существующих.
-- Все секции обновляются снизу вверх (креатив → площадка → канал → формат): плотно оборачивают содержимое с настраиваемым отступом (см. `src/plugin-config.ts`).
+- Все секции обновляются снизу вверх (креатив → площадка → канал → формат): плотно оборачивают содержимое с настраиваемым отступом (см. `src/shared/config/index.ts`).
 
 ### Экспорт
 
@@ -295,21 +312,38 @@ xxxx-yyy
 
 ### Архитектура
 
-Двухпоточная модель Figma-плагинов:
+Двухпоточная модель Figma-плагинов с Feature-Sliced Design:
 
 | Файл | Поток | Роль |
 |------|-------|------|
-| `src/code.ts` | Main thread (sandbox) | Сканирование дерева страницы, экспорт PNG-байт, переименование фреймов |
-| `src/ui.tsx` | UI thread (iframe, Preact) | Конвертация форматов, сборка GIF, ZIP, интерфейс |
-| `src/plugin-config.ts` | — | Центральный конфиг: размер окна, константы раскладки, параметры сжатия |
+| `src/app/figma.ts` | Main thread (sandbox) | Точка входа: `showUI`, регистрация обработчиков, события страницы |
+| `src/features/export-frames/api/` | Main thread | Обработчики экспорта: scan, rename, pipeline, debounce documentchange |
+| `src/features/place-sections/api/` | Main thread | Обработчики place/align: создание секций, позиционирование фреймов |
+| `src/entities/frame/api/` | Main thread | `scanPage()`, `getSectionsHierarchy()`, общий стейт `exportItems` |
+| `src/shared/lib/figma.ts` | Main thread | `isSection`, `isFrame`, `fitSectionToChildren`, `resizeSectionOnly`, `setSectionFill` |
+| `src/app/index.tsx` | UI thread (iframe, Preact) | Точка входа — монтирует `Root`, содержит глобальные CSS-правила |
+| `src/pages/export/ui/ExportPage.tsx` | — | Вкладка «Экспорт» — screen-стейт, вызывает `useExport()` |
+| `src/pages/organize/ui/OrganizePage.tsx` | — | Компонент вкладки «Разместить» |
+| `src/widgets/resize-limits/ui/` | — | Экран лимитов по ресайзам (дерево/таблица) + компоненты |
+| `src/widgets/platform-limits/ui/` | — | Секция лимитов по площадкам + `FormatRow`, `PlatformRow`, `GifDelayRow` |
+| `src/widgets/section-tree/ui/` | — | Панель дерева секций + компоненты узлов |
+| `src/features/export-frames/model/useExport.ts` | — | Кастомный хук: весь state, эффекты и обработчики экспорта |
+| `src/features/export-frames/ui/SetupGuide.tsx` | — | Инструкции для пустого состояния |
+| `src/features/place-sections/ui/components/` | — | `SelectionIndicator`, `PlaceResultMessage`, `PathField`, `PathInput` |
+| `src/entities/frame/model/` | — | Типы фреймов/дерева и утилиты фильтрации дерева |
+| `src/shared/ui/` | — | Общие компоненты: `TagBadge`, `NumInput`, `ProgressBar`, `TabBar`, `ResizeHandle`, `ComboboxDropdown` |
+| `src/shared/lib/` | — | Утилиты: сжатие, сборка GIF, HTML-превью, склонение, хелперы Figma |
+| `src/shared/config/index.ts` | — | Центральный конфиг: размер окна, константы раскладки, параметры сжатия, `FORMATS` |
+| `src/shared/analytics/index.ts` | — | Аналитика PostHog |
+| `src/shared/logger/index.ts` | — | Лог-форвардер для режима разработки |
 
-Общение между потоками через `postMessage` / `figma.ui.postMessage`.
+Общение между потоками через `emit` / `on` из `@create-figma-plugin/utilities`.
 
 #### Сборка (`scripts/build.js`)
 
-1. esbuild: `src/code.ts` → `dist/code.js`
+1. esbuild: `src/app/figma.ts` → `dist/code.js`
 2. Читает `gif.worker.js` из `node_modules/gif.js/dist/` и передаёт содержимое через esbuild `define` как `__GIF_WORKER_CONTENT__`
-3. esbuild: `src/ui.tsx` → `dist/ui.js` + `dist/ui.css` (JSX через preact/jsx-runtime)
+3. esbuild: `src/app/index.tsx` → `dist/ui.js` + `dist/ui.css` (JSX через preact/jsx-runtime)
 4. Инлайн JS и CSS в `dist/ui.html` (Figma не резолвит внешние файлы)
 5. Вызывает `manifest.js(env)` и записывает результат в `dist/manifest.json` (env-переменные подставляются в `name`, `networkAccess.allowedDomains` и `networkAccess.devAllowedDomains`)
 

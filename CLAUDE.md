@@ -13,8 +13,8 @@ A Figma plugin ("Export Prod") for batch-exporting frames as JPG, PNG, WebP, or 
 ## Build Commands
 
 ```bash
-npm run build     # Full build: code.ts + ui.tsx → dist/ (NODE_ENV=production)
-npm run watch     # Watch mode: rebuilds both code.ts and ui.tsx on changes (NODE_ENV=development)
+npm run build     # Full build: app/figma.ts + app/index.tsx → dist/ (NODE_ENV=production)
+npm run watch     # Watch mode: rebuilds both app/figma.ts and app/index.tsx on changes (NODE_ENV=development)
 ```
 
 Linting and formatting are configured via ESLint + Prettier with a Husky pre-commit hook. Run `npm run prepare` once after cloning to activate the hook.
@@ -51,19 +51,83 @@ When adding a new gitignored variable that should be present in production build
 
 ## Architecture
 
-**Two-thread Figma plugin model:**
+**Two-thread Figma plugin model with full Feature-Sliced Design (strict layer order: `app → pages → widgets → features → entities → shared`):**
 
-- `src/code.ts` — Main thread (Figma sandbox). Scans the page tree, exports frame pixels as PNG bytes, sends them to the UI one at a time via `postMessage`.
-- `src/ui.tsx` — UI thread (iframe, Preact). Receives PNG bytes, converts to the target format, applies compression to meet size limits, assembles GIFs, builds the ZIP, and triggers download.
-- `src/plugin-config.ts` — Central config module. All tunable constants (window size, section layout gaps and opacities, compression parameters, GIF settings, debounce delay, export scale). Imported in both threads as `import * as config from './plugin-config'`.
+- `src/app/figma.ts` — Code thread entry point (Figma sandbox). Calls `figma.showUI`, registers feature handlers, and listens to page-level Figma events (`currentpagechange`, `selectionchange`).
+- `src/app/index.tsx` — UI thread entry point (iframe, React/Preact-compat). Contains only `Root` and the `render()` call. All UI logic lives in the modules below.
+- `src/shared/config/index.ts` — Central config module. All tunable constants (window size, section layout gaps and opacities, compression parameters, GIF settings, debounce delay, export scale, `FORMATS`). Imported in both threads as `import * as config from '../shared/config'`.
 
-**Initialization handshake:** `code.ts` does NOT push `scan-result` on startup — the UI iframe may not have registered its message listener yet (race condition). Instead, the UI sends `{ type: 'scan' }` from its `useEffect` once the listener is registered, and `code.ts` responds. The same pull pattern applies to `get-sections` in the Place tab. Never switch back to push-on-startup for initial data.
+**Source structure:**
+
+```
+src/
+  app/
+    figma.ts                              code thread entry: showUI + register features + page events
+    index.tsx                             UI thread entry: Root + render call + global CSS
+  pages/
+    export/ui/
+      ExportPage.tsx                      export tab — screen state ('main'|'resize-limits'), calls useExport()
+    organize/ui/
+      OrganizePage.tsx                    place tab — listens for sections/selection messages
+  widgets/
+    resize-limits/ui/
+      ResizeLimitsScreen.tsx              resize-limits sub-screen (tree/table view of per-frame limits)
+      components/                         ViewToggleIcons, FrameRow, TableRow, TableHeader,
+                                          TreeNodeView, ResizeLimitsButton, ResizeLimitsHeader
+    platform-limits/ui/
+      PlatformLimitsSection.tsx           per-format/platform limits section on the main export screen
+      components/                         FormatRow, PlatformRow, GifDelayRow
+    section-tree/ui/
+      SectionTreePanel.tsx                "Add to section" panel (search + tree)
+      components/                         SectionTree, SectionFormatNode, SectionChannelNode,
+                                          SectionPlatformNode, CreativeRow
+  features/
+    export-frames/
+      api/
+        index.ts                          code thread: export handlers (scan, rename, start-export,
+                                          request-frame) + documentchange debounce; exportItems state
+      model/
+        useExport.ts                      custom hook: all export state, refs, effects, and handlers
+      ui/
+        SetupGuide.tsx                    empty-state setup instructions
+    place-sections/
+      api/
+        index.ts                          code thread: place-frames + align-sections + get-sections handlers
+      ui/components/                      SelectionIndicator, PlaceResultMessage, PathField, PathInput
+  entities/
+    frame/
+      api/
+        index.ts                          code thread: scanPage(), getSectionsHierarchy(), exportItems shared state
+      model/
+        types.ts                          FrameTree, ScanResult, ExportFrame and other shared types
+        tree.ts                           FlatRow type, filterTree, flattenToRows, filterFlatRows, countFrames
+  shared/
+    ui/                                   TagBadge, NumInput, ProgressBar, ResizeHandle, TabBar, ComboboxDropdown
+    lib/
+      figma.ts                            isSection, isFrame, fitSectionToChildren, resizeSectionOnly, setSectionFill
+      compression.ts                      pngBytesToCanvas, convertFrame, binary-search compression
+      gif.ts                              assembleGif, GIF worker URL (declares __GIF_WORKER_CONTENT__)
+      preview.ts                          escHtml, buildPreviewHtml
+      declension.ts                       Russian noun declension helper
+    types/
+      gif.d.ts                            ambient type declaration for gif.js npm package
+    config/
+      index.ts                            all tunable constants + FORMATS
+    analytics/
+      index.ts                            PostHog analytics
+    logger/
+      index.ts                            dev-only log forwarder
+```
+
+**Messaging:** Both threads use `emit` / `on` from `@create-figma-plugin/utilities` (no raw `figma.ui.postMessage` / `parent.postMessage`). Message format is an array `[name, ...args]` — never a `{type: X, ...}` object. Each `on(name, handler)` returns an unsubscribe function; in the UI thread, multiple listeners are collected and cleaned up in `useEffect` return: `const offs = [on(...), on(...)]; return () => offs.forEach(off => off())`.
+
+**Initialization handshake:** `app/figma.ts` does NOT push `scan-result` on startup — the UI iframe may not have registered its message listener yet (race condition). Instead, the UI calls `emit('scan')` from its `useEffect` once listeners are registered, and the code thread responds. The same pull pattern applies to `get-sections` in the Place tab. Never switch back to push-on-startup for initial data.
 
 **Build pipeline (`scripts/build.js`):**
-1. esbuild bundles `src/code.ts` → `dist/code.js`
+1. esbuild bundles `src/app/figma.ts` → `dist/code.js`
 2. Reads `gif.worker.js` from `node_modules/gif.js/dist/` and passes its content to esbuild via `define` as `__GIF_WORKER_CONTENT__` (lazily initialized in the UI via `URL.createObjectURL`)
 3. Loads env files (CRA priority order), injects `POSTHOG_*` vars and `LOG_SERVER` as `__VAR__` constants; also injects `__VERSION__` (from `git describe --tags --abbrev=0`, fallback to `package.json`) and `__DEV__` (`true` in watch mode, `false` in production)
-4. esbuild bundles `src/ui.tsx` → `dist/ui.js` + `dist/ui.css` (JSX via preact/jsx-runtime)
+4. esbuild bundles `src/app/index.tsx` → `dist/ui.js` + `dist/ui.css` (entry key named `ui` to preserve output filename). JSX uses `preact/jsx-runtime`; React imports (`react`, `react-dom`, `react/jsx-runtime`) are aliased to their Preact equivalents so React components work out of the box.
 5. Inlines `dist/ui.js` and `dist/ui.css` into `dist/ui.html`
 6. Calls `manifest.js(env)` and writes the result to `dist/manifest.json` (injects `PLUGIN_NAME` → `name`, `POSTHOG_HOST` → `networkAccess.allowedDomains`, `LOG_SERVER` → `networkAccess.devAllowedDomains`)
 
@@ -74,11 +138,11 @@ When adding a new gitignored variable that should be present in production build
 
 **`manifest.js`** at the project root is the source of truth for the manifest — it exports a factory `(env) => ({...})`. Do not edit `dist/manifest.json` directly.
 
-## Dev Logging (`src/logger.ts`)
+## Dev Logging (`src/shared/logger/index.ts`)
 
-`src/logger.ts` is the dev-only logging module imported by `ui.tsx`. In production (`__DEV__ = false`) all network sends are no-ops.
+`src/shared/logger/index.ts` is the dev-only logging module imported by `src/features/export-frames/model/useExport.ts` and `src/pages/export/ui/ExportPage.tsx`. In production (`__DEV__ = false`) all network sends are no-ops.
 
-Exports: `log`, `warn`, `error`, `info` (thread `ui`) and `fromCodeThread` (thread `code`, called from the `{ type: 'log' }` postMessage bridge).
+Exports: `log`, `warn`, `error`, `info` (thread `ui`). `fromCodeThread` is defined but not wired by default (the code thread does not emit `log` events).
 
 At module load time in dev mode, it also:
 - Overrides `console.warn` and `console.error` to forward captured output to the server as thread `figma`
@@ -112,19 +176,32 @@ For GIF: frames at the same Y position are grouped into one animation, sorted le
 
 Frame processing is sequential (one at a time) to avoid overloading the Figma plugin bridge.
 
-## UI Features (`src/ui.tsx`)
+## UI Features
 
 ### Export tab
-- **Ресайзы screen**: per-frame size limits live on a dedicated sub-screen (`screen === 'resize-limits'`), opened via the "Ресайзы" button on the main export screen. The button shows the total frame count. The sub-screen has a fixed header with a back arrow (`←`), the title, a tree/table view toggle (icon buttons), and a search input pinned below the title row. `screen` state (`'main' | 'resize-limits'`) lives in `App`. `resizeLimitsView` state (`'tree' | 'table'`) also lives in `App`.
+- **Ресайзы screen**: per-frame size limits live on a dedicated sub-screen rendered by `ResizeLimitsScreen` (`src/widgets/resize-limits/ui/ResizeLimitsScreen.tsx`), opened via the "Ресайзы" button on the main export screen. The button shows the total frame count. The sub-screen has a fixed header (`ResizeLimitsHeader`) with a back arrow (`←`), the title, a tree/table view toggle (icon buttons), and a search input pinned below the title row. `screen` state (`'main' | 'resize-limits'`) lives in `ExportPage`. `resizeLimitsView` state (`'tree' | 'table'`) lives in `useExport`.
 - **Tree view** (`resizeLimitsView === 'tree'`): collapsible format/channel/platform/creative nodes; sticky format headers; all nodes expanded by default (`defaultExpanded={true}`). Rendered via `TreeNodeView` + `FrameRow`.
 - **Table view** (`resizeLimitsView === 'table'`): flat list of all frames with a sticky column header row (Формат / Креатив / Ресайз / Лимит). Each row rendered by `TableRow` component. The creative column cell has a `title` attribute with the full path (`channel › platform › creative`). Data comes from `flattenToRows(tree)` → `filterFlatRows(rows, search)`. `FlatRow` interface holds `key`, `formatTag`, `channel`, `platform`, `creative`, `frameName`, `gifFrameInfo`.
-- **Per-frame size limits**: `FrameRow` (tree) and `TableRow` (table) components — hover highlight (`--figma-color-bg-hover`), click-to-focus on limit input
-- **Per-platform size limits**: global limits per format+platform combination
-- **Numeric inputs** (`NumInput`, `FrameRow` limit field, `TableRow` limit field): `type="text"` with `inputMode="decimal"`. Input is filtered on change — only digits and one decimal dot allowed; commas are converted to dots. On blur: trailing dot is stripped, value `<= 0` clears to empty (empty = no limit). Do not switch these back to `type="number"`.
+- **Per-frame size limits**: `FrameRow` (tree) and `TableRow` (table) components — hover highlight (`--figma-color-bg-hover`), click-to-focus on limit input (via `containerRef` + `querySelector('input')`)
+- **Per-platform size limits**: global limits per format+platform combination, stored in `platformSizes` as `"${format}/${platformName}"` keys. Each platform row is a `PlatformRow` component with hover + click-to-focus.
+- **Per-format size limits**: default limit for all platforms of a given format, stored in `platformSizes` as `"${format}"` key (no platform suffix). Rendered by `FormatRow` component. Priority in `getLimit`: per-frame > per-platform > per-format.
+- **GIF delay row**: `GifDelayRow` component — full-width hover, click-to-focus on the input.
+- **Numeric inputs** (`NumInput`, `FrameRow`, `TableRow`, `FormatRow`, `PlatformRow`, `GifDelayRow`): use `TextboxNumeric` from `@create-figma-plugin/ui` with `variant="border"` and `validateOnBlur`. `NumInput` (`src/shared/ui/NumInput.tsx`) wraps `TextboxNumeric` and accepts a `containerRef` so callers can focus the inner input via `containerRef.current?.querySelector('input')?.focus()`. Do not replace with native `<input type="number">`.
+- **Text inputs** (`PathField`, `PathInput`): use `Textbox` from `@create-figma-plugin/ui` with `variant="border"` and `onValueInput` callback.
 - **Search/filter**: search input is in the fixed header of the Ресайзы screen (not in the scroll area). In tree mode it filters via `filterTree`; in table mode via `filterFlatRows`.
 - **Path mode**: segmented control to include or strip the format folder from ZIP paths
 - **GIF delay**: configurable frame delay (seconds)
-- **Preview HTML**: after export, downloads a self-contained HTML file for visual review. All Figma node names and file paths are HTML-escaped via `escHtml()` before insertion to prevent XSS.
+- **Preview HTML**: after export, downloads a self-contained HTML file for visual review. All Figma node names and file paths are HTML-escaped via `escHtml()` (`src/shared/lib/preview.ts`) before insertion to prevent XSS.
+- **Hover/active states**: controlled via CSS classes injected in `Root`'s `<style>` tag (in `src/app/index.tsx`). Classes and their rules:
+  - `.tab-btn` / `.tab-active` — tab bar buttons; hover/active only applies when `.tab-active` is absent
+  - `.btn-icon` / `.btn-active` — small icon buttons; hover/active skipped when `.btn-active` is present
+  - `.segmented_control_segmentedControl label:not(:has(.segmented_control_input:checked))` — hover/active skipped for the selected segment
+  - `.link-text` — clickable spans (Отмена, Очистить экспорт, Выровнять секции); uses opacity change
+  - `.back-row` — full-width clickable area in the Ресайзы sub-screen header (arrow + title); toggle buttons sit above it via `position: absolute` with `stopPropagation`
+  - `.tree-header` — collapsible node headers in both tree views
+  - `.limit-row` — rows in "Лимиты по площадкам" and the GIF delay row; full-width via `margin: 0 -N px` where needed
+  - Ресайзы nav button uses `useState` (not CSS class) because its inline `background` would override CSS `:hover`
+  - Sticky format headers in tree use `useState` for the same reason
 - **Resize handle**: drag bottom-right corner to resize the plugin window
 - **Layout**: `Root` is a flex column filling 100% of the iframe (`html, body, #create-figma-plugin { height: 100%; overflow: hidden }`). The tab bar sits at the top; each tab content fills the remaining height.
 - **Export tab scroll**: the content area (`flex: 1, overflow-y: auto`) scrolls independently. The bottom action bar (export button / progress / download) is a normal flow element pinned at the bottom of the flex column — not `position: fixed`. The scrollbar track never overlaps the button zone.
@@ -138,9 +215,9 @@ Frame processing is sequential (one at a time) to avoid overloading the Figma pl
 - Sections are created if they don't exist; frames are appended to existing creative sections (stacked vertically, or horizontally for GIF slides)
 - **New section positioning**: new siblings are placed after existing ones (channels/platforms stack vertically; creatives stack horizontally within a platform)
 - **New format section positioning**: if other format sections already exist on the page, the new one is placed `FORMAT_SECTION_GAP` px to the right of the rightmost; if no format sections exist yet, it is placed at the absolute position of the selected frames and automatically selected in Figma
-- **Section fitting** (`fitSectionToChildren` in `code.ts`): works in local coordinates — shifts the section origin so content has `padding` space on all sides, compensates children's local positions to keep their absolute positions unchanged, then resizes. Uses local coords (not `absoluteBoundingBox`) to avoid stale values after `appendChild`. Default padding is `SECTION_FIT_PADDING` (see `plugin-config.ts`).
+- **Section fitting** (`fitSectionToChildren` in `src/shared/lib/figma.ts`): works in local coordinates — shifts the section origin so content has `padding` space on all sides, compensates children's local positions to keep their absolute positions unchanged, then resizes. Uses local coords (not `absoluteBoundingBox`) to avoid stale values after `appendChild`. Default padding is `SECTION_FIT_PADDING` (see `shared/config/index.ts`).
 
-## Analytics (`src/analytics.ts`)
+## Analytics (`src/shared/analytics/index.ts`)
 
 PostHog EU, fire-and-forget via fetch. Key and host injected at build time — not hardcoded in source.
 
@@ -167,8 +244,9 @@ The workflow builds the plugin and attaches the ZIP (`dist/`) to the GitHub rele
 
 - `jszip` — ZIP assembly in the browser
 - `gif.js` — GIF encoding with Web Workers (worker script injected via esbuild `define`)
-- `preact` — UI framework
-- `@create-figma-plugin/ui` — Figma-styled UI components
+- `preact` — UI framework (used via React-compat alias so components can use React imports)
+- `@create-figma-plugin/ui` v4 — Figma-styled UI components (tracks current Figma design system). Used components: `Button`, `Text`, `Muted`, `VerticalSpace`, `Textbox`, `TextboxNumeric`, `render`. All inputs use `variant="border"`. `render(Component)(rootEl, props)` mounts the UI.
+- `@create-figma-plugin/utilities` v4 — `emit`/`on` (type-safe cross-thread messaging using `[name, ...args]` array format). Used in both code thread modules and `app/index.tsx`. **Do NOT use `showUI` from utilities** — it wraps `__html__` inside a `<script>` tag, which breaks because Figma provides `__html__` as a full HTML document. Use `figma.showUI(__html__, options)` directly in `app/figma.ts` instead.
 - `@figma/plugin-typings` — TypeScript types for Figma Plugin API
 - `esbuild` — Bundler
 

@@ -1,6 +1,6 @@
 {
   "name": "export-prod",
-  "version": "1.4.1",
+  "version": "1.4.2-alpha",
   "description": "Figma plugin for batch exporting frames with compression",
   "scripts": {
     "build": "NODE_ENV=production node scripts/build.js",
@@ -17,7 +17,8 @@
     "preact": "^10.24.0"
   },
   "devDependencies": {
-    "@create-figma-plugin/ui": "^3.0.0",
+    "@create-figma-plugin/ui": "^4.0.3",
+    "@create-figma-plugin/utilities": "^4.0.3",
     "@figma/plugin-typings": "^1.100.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",

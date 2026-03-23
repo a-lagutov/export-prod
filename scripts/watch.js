@@ -99,18 +99,23 @@ fs.watch(path.join(root, 'manifest.js'), () => writeManifest())
 
 async function watch() {
   const codeCtx = await esbuild.context({
-    entryPoints: [path.join(root, 'src/code.ts')],
+    entryPoints: [path.join(root, 'src/app/figma.ts')],
     bundle: true,
     outfile: path.join(root, 'dist/code.js'),
     target: 'es2017',
   })
 
   const uiCtx = await esbuild.context({
-    entryPoints: [path.join(root, 'src/ui.tsx')],
+    entryPoints: { ui: path.join(root, 'src/app/index.tsx') },
     bundle: true,
     outdir: path.join(root, 'dist'),
     jsx: 'automatic',
     jsxImportSource: 'preact',
+    alias: {
+      react: path.resolve(root, 'node_modules/preact/compat/dist/compat.module.js'),
+      'react-dom': path.resolve(root, 'node_modules/preact/compat/dist/compat.module.js'),
+      'react/jsx-runtime': path.resolve(root, 'node_modules/preact/jsx-runtime/dist/jsxRuntime.module.js'),
+    },
     define: {
       __GIF_WORKER_CONTENT__: JSON.stringify(gifWorkerContent),
       ...envDefine,
