@@ -200,6 +200,8 @@ export function register(): void {
   )
 
   on('align-sections', () => {
+    // Capture viewport center before any layout changes so we can reposition sections there
+    const viewportCenter = figma.viewport.center
     const formatSections: SectionNode[] = []
 
     for (const topChild of figma.currentPage.children) {
@@ -274,8 +276,19 @@ export function register(): void {
     }
 
     if (formatSections.length > 0) {
+      // Shift all format sections so their collective bounding box is centered on the viewport
+      const minX = Math.min(...formatSections.map((s) => s.x))
+      const maxX = Math.max(...formatSections.map((s) => s.x + s.width))
+      const minY = Math.min(...formatSections.map((s) => s.y))
+      const maxY = Math.max(...formatSections.map((s) => s.y + s.height))
+      const deltaX = viewportCenter.x - (minX + maxX) / 2
+      const deltaY = viewportCenter.y - (minY + maxY) / 2
+      for (const fmt of formatSections) {
+        fmt.x += deltaX
+        fmt.y += deltaY
+      }
+
       figma.currentPage.selection = formatSections
-      figma.viewport.scrollAndZoomIntoView(formatSections)
     }
 
     emit('align-done')
