@@ -1,6 +1,13 @@
 import { useState, useMemo } from 'react'
 import { Textbox } from '@create-figma-plugin/ui'
 import { ComboboxDropdown } from '../../../../shared/ui/ComboboxDropdown'
+import {
+  LABEL_FORMAT,
+  LABEL_CHANNEL,
+  LABEL_PLATFORM,
+  LABEL_CREATIVE,
+  PLACEHOLDER_PATH,
+} from '../../../../shared/config/strings'
 import type { SectionFormat } from '../../../../entities/frame/model/types'
 
 /**
@@ -44,6 +51,10 @@ function getPathCompletions(input: string, sections: SectionFormat[]): string[] 
  * Single-field path input for the "Путь" mode in the Place tab.
  * Accepts a slash-separated path (`Format/Channel/Platform/Creative`) with segment-aware autocomplete.
  * Shows a breadcrumb hint row highlighting the currently active segment.
+ * @param root0
+ * @param root0.value
+ * @param root0.onChange
+ * @param root0.sections
  */
 export function PathInput({
   value,
@@ -58,7 +69,10 @@ export function PathInput({
   const completions = useMemo(() => getPathCompletions(value, sections), [value, sections])
   const parts = value.split('/')
 
-  /** Applies a selected autocomplete completion and appends "/" if the path is not yet fully specified. */
+  /**
+   * Applies a selected autocomplete completion and appends "/" if the path is not yet fully specified.
+   * @param completion
+   */
   function handleSelect(completion: string) {
     // If less than 4 parts, append "/" to prompt next segment
     const completionParts = completion.split('/')
@@ -70,7 +84,7 @@ export function PathInput({
     <div style={{ position: 'relative' }}>
       <Textbox
         value={value}
-        placeholder="GIF/Канал/Площадка/Креатив"
+        placeholder={PLACEHOLDER_PATH}
         onValueInput={onChange}
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
@@ -86,7 +100,7 @@ export function PathInput({
             gap: 4,
           }}
         >
-          {['Формат', 'Канал', 'Площадка', 'Креатив'].map((label, i) => (
+          {[LABEL_FORMAT, LABEL_CHANNEL, LABEL_PLATFORM, LABEL_CREATIVE].map((label, i) => (
             <span
               key={label}
               style={{

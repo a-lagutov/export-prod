@@ -1,3 +1,24 @@
+import {
+  GUIDE_TITLE,
+  GUIDE_DESCRIPTION,
+  LABEL_FORMAT,
+  LABEL_CHANNEL,
+  LABEL_PLATFORM,
+  LABEL_CREATIVE,
+  PLACEHOLDER_FORMAT,
+  PLACEHOLDER_CHANNEL,
+  PLACEHOLDER_PLATFORM,
+  PLACEHOLDER_CREATIVE,
+  GUIDE_NAMING_TITLE,
+  GUIDE_NAMING_JIRA,
+  GUIDE_NAMING_CREATIVE_HINT,
+  GUIDE_NAMING_WORDS_SEPARATOR,
+  GUIDE_FRAME_RENAME_NOTE,
+  GUIDE_GIF_NOTE,
+  GUIDE_NAMING_LINK,
+  GUIDE_FRAME_SIZE_EXAMPLE,
+} from '../../../shared/config/strings'
+
 /**
  * Empty-state guide shown on the Export tab when no valid section hierarchy is found on the page.
  * Explains the required 4-level structure, creative naming conventions, and links to the wiki.
@@ -14,18 +35,17 @@ export function SetupGuide() {
         color: 'var(--figma-color-text)',
       }}
     >
-      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>Как настроить страницу</div>
+      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>{GUIDE_TITLE}</div>
       <div style={{ color: 'var(--figma-color-text-secondary)', marginBottom: 12 }}>
-        Плагин ищет на текущей странице вложенные секции с определённой структурой. Создайте 4
-        уровня секций:
+        {GUIDE_DESCRIPTION}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
         {[
-          { level: '1', label: 'Формат', desc: 'JPG, PNG, WEBP или GIF', color: '#7B61FF' },
-          { level: '2', label: 'Канал', desc: 'например: 5_Context_Media', color: '#0D99FF' },
-          { level: '3', label: 'Площадка', desc: 'например: VK, TG, Bigo', color: '#14AE5C' },
-          { level: '4', label: 'Креатив', desc: 'например: 1234-card', color: '#F24822' },
+          { level: '1', label: LABEL_FORMAT, desc: PLACEHOLDER_FORMAT, color: '#7B61FF' },
+          { level: '2', label: LABEL_CHANNEL, desc: PLACEHOLDER_CHANNEL, color: '#0D99FF' },
+          { level: '3', label: LABEL_PLATFORM, desc: PLACEHOLDER_PLATFORM, color: '#14AE5C' },
+          { level: '4', label: LABEL_CREATIVE, desc: PLACEHOLDER_CREATIVE, color: '#F24822' },
         ].map(({ level, label, desc, color }) => (
           <div
             key={level}
@@ -93,11 +113,11 @@ export function SetupGuide() {
           lineHeight: '17px',
         }}
       >
-        <div style={{ fontWeight: 600, marginBottom: 4 }}>Нейминг креативов</div>
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>{GUIDE_NAMING_TITLE}</div>
         <div style={{ color: 'var(--figma-color-text-secondary)' }}>
-          <span style={{ fontWeight: 600 }}>xxxx</span> — номер задачи в Jira
+          <span style={{ fontWeight: 600 }}>xxxx</span> {GUIDE_NAMING_JIRA}
           <br />
-          <span style={{ fontWeight: 600 }}>yyy</span> — условное обозначение креатива
+          <span style={{ fontWeight: 600 }}>yyy</span> {GUIDE_NAMING_CREATIVE_HINT}
         </div>
         <div style={{ marginTop: 6, color: 'var(--figma-color-text-secondary)' }}>
           <div>
@@ -112,7 +132,7 @@ export function SetupGuide() {
           </div>
         </div>
         <div style={{ marginTop: 4, color: 'var(--figma-color-text-secondary)' }}>
-          Несколько слов — через точку:
+          {GUIDE_NAMING_WORDS_SEPARATOR}
         </div>
         <div style={{ color: 'var(--figma-color-text-secondary)' }}>
           <div>
@@ -148,7 +168,7 @@ export function SetupGuide() {
           cursor: 'pointer',
         }}
       >
-        Гайд по неймингу
+        {GUIDE_NAMING_LINK}
       </a>
 
       {/* Frame auto-rename note */}
@@ -159,10 +179,10 @@ export function SetupGuide() {
           color: 'var(--figma-color-text-secondary)',
         }}
       >
-        Имена фреймов (ресайзов) автоматически заменятся на размер фрейма при экспорте (например,{' '}
-        <span style={{ fontFamily: 'monospace' }}>1080x1920</span>).
+        {GUIDE_FRAME_RENAME_NOTE}{' '}
+        <span style={{ fontFamily: 'monospace' }}>{GUIDE_FRAME_SIZE_EXAMPLE}</span>).
         <br />
-        Для GIF: фреймы на одной Y-позиции станут одной анимацией (слева направо).
+        {GUIDE_GIF_NOTE}
       </div>
     </div>
   )

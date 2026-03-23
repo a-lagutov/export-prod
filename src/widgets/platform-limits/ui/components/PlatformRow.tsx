@@ -1,11 +1,19 @@
 import { useRef } from 'react'
 import { Text } from '@create-figma-plugin/ui'
 import { NumInput } from '../../../../shared/ui/NumInput'
+import { tooltipExportPlatform, SUFFIX_MB } from '../../../../shared/config/strings'
 
 /**
  * Row for setting the size limit for a specific format + platform combination.
  * Contains a platform-filtered export button, the platform name, and a numeric limit input.
  * Clicking anywhere on the row focuses the input.
+ * @param root0
+ * @param root0.name
+ * @param root0.format
+ * @param root0.value
+ * @param root0.onChange
+ * @param root0.isExporting
+ * @param root0.onExport
  */
 export function PlatformRow({
   name,
@@ -43,7 +51,7 @@ export function PlatformRow({
           if (!isExporting) onExport()
         }}
         disabled={isExporting}
-        title={`Экспортировать ${format.toUpperCase()} / ${name}`}
+        title={tooltipExportPlatform(format.toUpperCase(), name)}
         style={{
           width: 22,
           height: 22,
@@ -65,7 +73,7 @@ export function PlatformRow({
       <div style={{ flex: 1 }}>
         <Text>{name}</Text>
       </div>
-      <NumInput value={value} onChange={onChange} suffix="МБ" containerRef={containerRef} />
+      <NumInput value={value} onChange={onChange} suffix={SUFFIX_MB} containerRef={containerRef} />
     </div>
   )
 }

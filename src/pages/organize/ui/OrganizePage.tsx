@@ -2,7 +2,20 @@ import { useState, useEffect } from 'react'
 import { emit, on } from '@create-figma-plugin/utilities'
 import { Button, VerticalSpace, SegmentedControl } from '@create-figma-plugin/ui'
 import { track } from '../../../shared/analytics/index'
-import { declension } from '../../../shared/lib/declension'
+import {
+  MODE_BY_FIELDS,
+  MODE_BY_PATH,
+  LABEL_FORMAT,
+  LABEL_CHANNEL,
+  LABEL_PLATFORM,
+  LABEL_CREATIVE,
+  PLACEHOLDER_FORMAT,
+  PLACEHOLDER_CHANNEL,
+  PLACEHOLDER_PLATFORM,
+  PLACEHOLDER_CREATIVE,
+  BTN_PLACE_FRAMES,
+  placeBtnLabel,
+} from '../../../shared/config/strings'
 import { SelectionIndicator } from '../../../features/place-sections/ui/components/SelectionIndicator'
 import { PlaceResultMessage } from '../../../features/place-sections/ui/components/PlaceResultMessage'
 import { PathField } from '../../../features/place-sections/ui/components/PathField'
@@ -64,7 +77,13 @@ export function OrganizePage() {
   const { fmt: eFmt, ch: eCh, pl: ePl, cr: eCr } = getEffectiveValues()
   const canPlace = !!(eFmt && eCh && ePl && eCr && selectedCount > 0)
 
-  /** Clears the previous result, tracks the analytics event, and emits `place-frames` to the code thread. */
+  /**
+   * Clears the previous result, tracks the analytics event, and emits `place-frames` to the code thread.
+   * @param fmt
+   * @param ch
+   * @param pl
+   * @param cr
+   */
   function doPlace(fmt: string, ch: string, pl: string, cr: string) {
     setResult(null)
     track('frames_placed', {
@@ -88,8 +107,8 @@ export function OrganizePage() {
         <SegmentedControl
           value={inputMode}
           options={[
-            { value: 'fields', children: 'По полям' },
-            { value: 'path', children: 'Путь' },
+            { value: 'fields', children: MODE_BY_FIELDS },
+            { value: 'path', children: MODE_BY_PATH },
           ]}
           onValueChange={setInputMode}
         />
@@ -100,7 +119,7 @@ export function OrganizePage() {
       {inputMode === 'fields' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <PathField
-            label="Формат"
+            label={LABEL_FORMAT}
             value={format}
             onChange={(v) => {
               setFormat(v)
@@ -109,10 +128,10 @@ export function OrganizePage() {
               setCreative('')
             }}
             options={['JPG', 'PNG', 'WEBP', 'GIF']}
-            placeholder="JPG, PNG, WEBP или GIF"
+            placeholder={PLACEHOLDER_FORMAT}
           />
           <PathField
-            label="Канал"
+            label={LABEL_CHANNEL}
             value={channel}
             onChange={(v) => {
               setChannel(v)
@@ -120,24 +139,24 @@ export function OrganizePage() {
               setCreative('')
             }}
             options={channelOptions}
-            placeholder="например: 5_Context_Media"
+            placeholder={PLACEHOLDER_CHANNEL}
           />
           <PathField
-            label="Площадка"
+            label={LABEL_PLATFORM}
             value={platform}
             onChange={(v) => {
               setPlatform(v)
               setCreative('')
             }}
             options={platformOptions}
-            placeholder="например: VK, TG, Bigo"
+            placeholder={PLACEHOLDER_PLATFORM}
           />
           <PathField
-            label="Креатив"
+            label={LABEL_CREATIVE}
             value={creative}
             onChange={setCreative}
             options={creativeOptions}
-            placeholder="например: 1234-card"
+            placeholder={PLACEHOLDER_CREATIVE}
           />
         </div>
       ) : (
@@ -147,9 +166,7 @@ export function OrganizePage() {
       {/* Place button */}
       <VerticalSpace space="small" />
       <Button fullWidth onClick={() => doPlace(eFmt, eCh, ePl, eCr)} disabled={!canPlace}>
-        {selectedCount > 0
-          ? `Поместить ${selectedCount} ${declension(selectedCount, 'фрейм', 'фрейма', 'фреймов')} в секции`
-          : 'Поместить в секции'}
+        {selectedCount > 0 ? placeBtnLabel(selectedCount) : BTN_PLACE_FRAMES}
       </Button>
 
       {/* Result */}

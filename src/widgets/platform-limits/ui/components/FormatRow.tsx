@@ -1,11 +1,18 @@
 import { useRef } from 'react'
 import { TagBadge } from '../../../../shared/ui/TagBadge'
 import { NumInput } from '../../../../shared/ui/NumInput'
+import { tooltipExportFormat, SUFFIX_MB } from '../../../../shared/config/strings'
 
 /**
  * Row for setting the default size limit for all platforms within a given format.
  * Contains a format-only export button, a `TagBadge`, and a numeric limit input.
  * Clicking anywhere on the row focuses the input.
+ * @param root0
+ * @param root0.format
+ * @param root0.value
+ * @param root0.onChange
+ * @param root0.isExporting
+ * @param root0.onExport
  */
 export function FormatRow({
   format,
@@ -41,7 +48,7 @@ export function FormatRow({
           if (!isExporting) onExport()
         }}
         disabled={isExporting}
-        title={`Экспортировать только ${format.toUpperCase()}`}
+        title={tooltipExportFormat(format.toUpperCase())}
         style={{
           padding: '2px 8px',
           fontSize: 10,
@@ -57,7 +64,7 @@ export function FormatRow({
       </button>
       <TagBadge format={format} />
       <div style={{ flex: 1 }} />
-      <NumInput value={value} onChange={onChange} suffix="МБ" containerRef={containerRef} />
+      <NumInput value={value} onChange={onChange} suffix={SUFFIX_MB} containerRef={containerRef} />
     </div>
   )
 }

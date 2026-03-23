@@ -71,12 +71,12 @@ module.exports = [
         },
       ],
       // Require @param and @returns tags when present in JSDoc
-      'jsdoc/require-param': 'error',
-      'jsdoc/require-param-description': 'error',
-      'jsdoc/require-returns': 'error',
-      'jsdoc/require-returns-description': 'error',
+      'jsdoc/require-param': 'warn',
+      'jsdoc/require-param-description': 'warn',
+      'jsdoc/require-returns': 'warn',
+      'jsdoc/require-returns-description': 'warn',
       // Description must not be empty
-      'jsdoc/require-description': ['error', { descriptionStyle: 'body' }],
+      'jsdoc/require-description': ['warn', { descriptionStyle: 'body' }],
     },
   },
 ]

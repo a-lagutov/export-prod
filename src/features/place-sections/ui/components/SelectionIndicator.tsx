@@ -1,10 +1,16 @@
 import { emit } from '@create-figma-plugin/utilities'
-import { declension } from '../../../../shared/lib/declension'
+import {
+  MSG_SELECT_FRAMES,
+  BTN_ALIGN_SECTIONS,
+  selectedFramesLabel,
+} from '../../../../shared/config/strings'
 
 /**
  * Displays how many frames are currently selected on the Figma page.
  * Shows a branded highlight when frames are selected; a muted state otherwise.
  * Also renders an "Выровнять секции" link that triggers the align-sections operation.
+ * @param root0
+ * @param root0.selectedCount
  */
 export function SelectionIndicator({ selectedCount }: { selectedCount: number }) {
   return (
@@ -23,9 +29,7 @@ export function SelectionIndicator({ selectedCount }: { selectedCount: number })
               : 'var(--figma-color-text-secondary)',
         }}
       >
-        {selectedCount > 0
-          ? `Выделено ${selectedCount} ${declension(selectedCount, 'фрейм', 'фрейма', 'фреймов')} на странице`
-          : 'Выделите фреймы на странице'}
+        {selectedCount > 0 ? selectedFramesLabel(selectedCount) : MSG_SELECT_FRAMES}
       </div>
       <span
         class="link-text"
@@ -38,7 +42,7 @@ export function SelectionIndicator({ selectedCount }: { selectedCount: number })
           flexShrink: 0,
         }}
       >
-        Выровнять секции
+        {BTN_ALIGN_SECTIONS}
       </span>
     </div>
   )

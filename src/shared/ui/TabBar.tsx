@@ -1,4 +1,11 @@
-/** Top navigation bar with two tabs: "Экспорт" and "Разместить". */
+import { TAB_EXPORT, TAB_ORGANIZE } from '../config/strings'
+
+/**
+ * Top navigation bar with two tabs: "Экспорт" and "Разместить".
+ * @param root0
+ * @param root0.active
+ * @param root0.onChange
+ */
 export function TabBar({
   active,
   onChange,
@@ -17,8 +24,8 @@ export function TabBar({
     >
       {(
         [
-          { key: 'export', label: 'Экспорт' },
-          { key: 'organize', label: 'Разместить' },
+          { key: 'export', label: TAB_EXPORT },
+          { key: 'organize', label: TAB_ORGANIZE },
         ] as const
       ).map(({ key, label }) => (
         <button

@@ -1,10 +1,18 @@
-import { SegmentedControl, SearchTextbox } from '@create-figma-plugin/ui'
+import { SegmentedControl } from '@create-figma-plugin/ui'
+import { SearchInput } from '../../../../shared/ui/SearchInput'
+import { LABEL_RESIZE_LIMITS } from '../../../../shared/config/strings'
 import { TreeIcon, TableIcon } from './ViewToggleIcons'
 
 /**
  * Fixed header for the `Resizes` sub-screen.
  * Contains a back arrow row (full-width clickable), tree/table toggle icons (absolute-positioned
  * above the back row to intercept clicks without propagation), and a search input.
+ * @param root0
+ * @param root0.view
+ * @param root0.onViewChange
+ * @param root0.search
+ * @param root0.onSearch
+ * @param root0.onBack
  */
 export function ResizeLimitsHeader({
   view,
@@ -43,7 +51,7 @@ export function ResizeLimitsHeader({
           >
             ←
           </span>
-          <span style={{ fontWeight: 600, fontSize: 13 }}>Лимиты по ресайзам</span>
+          <span style={{ fontWeight: 600, fontSize: 13 }}>{LABEL_RESIZE_LIMITS}</span>
         </div>
         <div
           onClick={(e) => e.stopPropagation()}
@@ -60,12 +68,7 @@ export function ResizeLimitsHeader({
         </div>
       </div>
       <div style={{ padding: '6px 12px 10px' }}>
-        <SearchTextbox
-          clearOnEscapeKeyDown
-          placeholder="Поиск по размеру, формату, названию..."
-          value={search}
-          onValueInput={onSearch}
-        />
+        <SearchInput value={search} onValueInput={onSearch} />
       </div>
     </div>
   )

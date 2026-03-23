@@ -1,3 +1,10 @@
+import {
+  LABEL_FORMAT,
+  LABEL_CREATIVE,
+  HEADER_RESIZE,
+  HEADER_LIMIT,
+} from '../../../../shared/config/strings'
+
 /** Sticky column header row for the table view: Format / Creative / Resize / Limit. */
 export function TableHeader() {
   return (
@@ -15,12 +22,12 @@ export function TableHeader() {
       }}
     >
       <span style={{ width: 36, fontSize: 10, color: 'var(--figma-color-text-tertiary)' }}>
-        Формат
+        {LABEL_FORMAT}
       </span>
       <span
         style={{ flex: 1, fontSize: 10, color: 'var(--figma-color-text-tertiary)', minWidth: 0 }}
       >
-        Креатив
+        {LABEL_CREATIVE}
       </span>
       <span
         style={{
@@ -30,7 +37,7 @@ export function TableHeader() {
           textAlign: 'right',
         }}
       >
-        Ресайз
+        {HEADER_RESIZE}
       </span>
       <span
         style={{
@@ -40,7 +47,7 @@ export function TableHeader() {
           textAlign: 'right',
         }}
       >
-        Лимит
+        {HEADER_LIMIT}
       </span>
       <span style={{ width: 20 }} />
     </div>

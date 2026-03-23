@@ -1,5 +1,6 @@
 import { Fragment } from 'react'
 import { VerticalSpace, Text } from '@create-figma-plugin/ui'
+import { LABEL_PLATFORM_LIMITS } from '../../../shared/config/strings'
 import { FormatRow } from './components/FormatRow'
 import { PlatformRow } from './components/PlatformRow'
 
@@ -7,6 +8,12 @@ import { PlatformRow } from './components/PlatformRow'
  * Section displaying per-format and per-platform size limits on the main export screen.
  * Renders a `FormatRow` for each format followed by `PlatformRow` entries for its platforms.
  * Each row has an export button to trigger a filtered export for that format/platform.
+ * @param root0
+ * @param root0.formatPlatforms
+ * @param root0.platformSizes
+ * @param root0.isExporting
+ * @param root0.onChange
+ * @param root0.onExport
  */
 export function PlatformLimitsSection({
   formatPlatforms,
@@ -25,7 +32,7 @@ export function PlatformLimitsSection({
     <Fragment>
       <VerticalSpace space="small" />
       <Text>
-        <strong>Лимиты по площадкам</strong>
+        <strong>{LABEL_PLATFORM_LIMITS}</strong>
       </Text>
       <VerticalSpace space="small" />
       <div

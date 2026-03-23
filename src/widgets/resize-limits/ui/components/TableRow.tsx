@@ -1,12 +1,17 @@
 import { useState, useRef } from 'react'
 import { TextboxNumeric } from '@create-figma-plugin/ui'
 import { TagBadge } from '../../../../shared/ui/TagBadge'
+import { SUFFIX_MB, PLACEHOLDER_ZERO } from '../../../../shared/config/strings'
 import type { FlatRow } from '../../../../entities/frame/model/tree'
 
 /**
  * A single row in the table view of the `Resizes` screen.
  * Displays format badge, creative name (with full path in `title`), resize name, and a limit input.
  * Clicking anywhere on the row focuses the numeric input.
+ * @param root0
+ * @param root0.row
+ * @param root0.frameSizes
+ * @param root0.onFrameSizeChange
  */
 export function TableRow({
   row,
@@ -71,8 +76,8 @@ export function TableRow({
         <TextboxNumeric
           value={frameSizes[row.key] ?? ''}
           onValueInput={(v) => onFrameSizeChange(row.key, v)}
-          suffix="МБ"
-          placeholder="0"
+          suffix={SUFFIX_MB}
+          placeholder={PLACEHOLDER_ZERO}
           validateOnBlur={(v) => (v === null || v <= 0 ? null : v)}
         />
       </div>

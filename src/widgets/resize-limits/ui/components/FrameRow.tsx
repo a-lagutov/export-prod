@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { TextboxNumeric } from '@create-figma-plugin/ui'
+import { SUFFIX_MB, PLACEHOLDER_ZERO } from '../../../../shared/config/strings'
 import type { TreeNode } from '../../../../entities/frame/model/types'
 
 /**
@@ -7,6 +8,11 @@ import type { TreeNode } from '../../../../entities/frame/model/types'
  * Shows the frame name (without extension) and a numeric size-limit input.
  * Clicking anywhere on the row focuses the input; hover highlight uses state (not CSS class)
  * because inline `background` would override CSS `:hover`.
+ * @param root0
+ * @param root0.node
+ * @param root0.formatTag
+ * @param root0.frameSizes
+ * @param root0.onFrameSizeChange
  */
 export function FrameRow({
   node,
@@ -52,8 +58,8 @@ export function FrameRow({
         <TextboxNumeric
           value={frameSizes[key] ?? ''}
           onValueInput={(v) => onFrameSizeChange(key, v)}
-          suffix="МБ"
-          placeholder="0"
+          suffix={SUFFIX_MB}
+          placeholder={PLACEHOLDER_ZERO}
           validateOnBlur={(v) => (v === null || v <= 0 ? null : v)}
         />
       </div>

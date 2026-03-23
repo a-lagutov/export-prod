@@ -1,6 +1,7 @@
 import { emit, on } from '@create-figma-plugin/utilities'
 import { scanPage, getSectionsHierarchy, updateExportItems } from '../../../entities/frame/api'
 import { FORMATS } from '../../../shared/config'
+import { placeResultMessage, MSG_NO_FRAMES_SELECTED } from '../../../shared/config/strings'
 import {
   isSection,
   isFrame,
@@ -37,7 +38,7 @@ export function register(): void {
       const selectedFrames = figma.currentPage.selection.filter(isFrame)
 
       if (selectedFrames.length === 0) {
-        emit('place-result', { success: false, message: 'Нет выбранных фреймов' })
+        emit('place-result', { success: false, message: MSG_NO_FRAMES_SELECTED })
         return
       }
 
@@ -188,7 +189,13 @@ export function register(): void {
       const count = selectedFrames.length
       emit('place-result', {
         success: true,
-        message: `${count} ${count === 1 ? 'фрейм помещён' : count < 5 ? 'фрейма помещено' : 'фреймов помещено'} в ${normalizedFormat} / ${channelName} / ${platformName} / ${creativeName}`,
+        message: placeResultMessage(
+          count,
+          normalizedFormat,
+          channelName,
+          platformName,
+          creativeName,
+        ),
       })
 
       // Update both tabs

@@ -1,4 +1,5 @@
 import { Muted } from '@create-figma-plugin/ui'
+import { MSG_NOTHING_FOUND } from '../../../shared/config/strings'
 import { ResizeLimitsHeader } from './components/ResizeLimitsHeader'
 import { TreeNodeView } from './components/TreeNodeView'
 import { TableHeader } from './components/TableHeader'
@@ -12,6 +13,15 @@ import type { FlatRow } from '../../../entities/frame/model/tree'
  * Sub-screen for viewing and editing per-frame size limits.
  * Supports two views toggled in the header: tree (collapsible hierarchy) and table (flat list).
  * Search is applied to both views via the fixed header input.
+ * @param root0
+ * @param root0.tree
+ * @param root0.frameSizes
+ * @param root0.onFrameSizeChange
+ * @param root0.search
+ * @param root0.onSearch
+ * @param root0.resizeLimitsView
+ * @param root0.setResizeLimitsView
+ * @param root0.onBack
  */
 export function ResizeLimitsScreen({
   tree,
@@ -105,7 +115,7 @@ export function ResizeLimitsScreen({
             ))
           ) : (
             <div style={{ padding: 12, textAlign: 'center' }}>
-              <Muted>Ничего не найдено</Muted>
+              <Muted>{MSG_NOTHING_FOUND}</Muted>
             </div>
           )
         ) : filteredFlatRows.length > 0 ? (
@@ -122,7 +132,7 @@ export function ResizeLimitsScreen({
           </>
         ) : (
           <div style={{ padding: 12, textAlign: 'center' }}>
-            <Muted>Ничего не найдено</Muted>
+            <Muted>{MSG_NOTHING_FOUND}</Muted>
           </div>
         )}
       </div>

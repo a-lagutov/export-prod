@@ -7,6 +7,13 @@ import { buildPreviewHtml } from '../../../shared/lib/preview'
 import { filterTree, flattenToRows, filterFlatRows } from '../../../entities/frame/model/tree'
 import { track } from '../../../shared/analytics/index'
 import { log, error, fromCodeThread } from '../../../shared/logger/index'
+import {
+  MSG_EXPORT_STARTING,
+  MSG_CREATING_ZIP,
+  MSG_RENAMING_FRAMES,
+  progressProcessing,
+  progressGif,
+} from '../../../shared/config/strings'
 import type { TreeNode, ExportItem } from '../../../entities/frame/model/types'
 
 export type Phase = 'loading' | 'empty' | 'ready' | 'exporting' | 'done'
@@ -66,7 +73,10 @@ export function useExport() {
     gifDelayRef.current = gifDelay
   }, [gifDelay])
 
-  /** Strips the leading format folder segment from a full path to produce the ZIP-relative path. */
+  /**
+   * Strips the leading format folder segment from a full path to produce the ZIP-relative path.
+   * @param path
+   */
   function resolvePath(path: string): string {
     return path.split('/').slice(1).join('/')
   }
@@ -75,6 +85,9 @@ export function useExport() {
    * Resolves the active size limit in bytes for a given frame, applying priority:
    * per-frame limit > per-platform limit > per-format limit.
    * Returns null if no limit is configured or the configured value is zero.
+   * @param fileName
+   * @param format
+   * @param platformName
    */
   function getLimit(fileName: string, format: string, platformName: string): number | null {
     const fSizes = frameSizesRef.current
@@ -116,7 +129,7 @@ export function useExport() {
       on('rename-done', () => {
         log('rename-done → emitting start-export', { activeCount: activeCountRef.current })
         cancelledRef.current = false
-        setProgress({ current: 0, total: activeCountRef.current, text: 'Начинаем экспорт...' })
+        setProgress({ current: 0, total: activeCountRef.current, text: MSG_EXPORT_STARTING })
         emit('start-export')
       }),
 
@@ -141,7 +154,7 @@ export function useExport() {
           setProgress({
             current: index + 1,
             total,
-            text: `Обработка ${index + 1}/${total}: ${path}`,
+            text: progressProcessing(index, total, path),
           })
           log('frame-data', { index, total, path, format, limitBytes: limit })
           try {
@@ -183,7 +196,7 @@ export function useExport() {
           setProgress({
             current: index + 1,
             total,
-            text: `Сборка GIF ${index + 1}/${total}: ${path}`,
+            text: progressGif(index, total, path),
           })
           log('gif-data', { index, total, path, limitBytes: limit })
           try {
@@ -202,7 +215,7 @@ export function useExport() {
       ),
 
       on('export-complete', () => {
-        setProgress((p) => ({ ...p, text: 'Создание ZIP...' }))
+        setProgress((p) => ({ ...p, text: MSG_CREATING_ZIP }))
         const previewHtml = buildPreviewHtml(exportedFilesRef.current)
         zipRef.current?.file('preview.html', previewHtml)
         zipRef.current?.generateAsync({ type: 'blob' }).then((blob) => {
@@ -249,6 +262,8 @@ export function useExport() {
   /**
    * Starts the export pipeline: renames frames, then triggers sequential frame processing.
    * @param filter - Optional format/platform filter to export a subset of frames.
+   * @param filter.format
+   * @param filter.platform
    */
   function handleExport(filter?: { format?: string; platform?: string }) {
     log('handleExport called', { filter })
@@ -266,7 +281,7 @@ export function useExport() {
     exportStartTimeRef.current = Date.now()
     setZipBlob(null)
     setPhase('exporting')
-    setProgress({ current: 0, total: activeCount, text: 'Переименование фреймов...' })
+    setProgress({ current: 0, total: activeCount, text: MSG_RENAMING_FRAMES })
     track('export_started', { frame_count: activeCount })
     emit('rename-frames', { filterFormat: filter?.format, filterPlatform: filter?.platform })
   }

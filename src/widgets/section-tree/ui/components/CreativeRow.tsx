@@ -1,9 +1,14 @@
 import { useState } from 'react'
+import { BTN_ADD_FRAMES_TITLE, MSG_SELECT_FRAMES } from '../../../../shared/config/strings'
 
 /**
  * Row for a creative section entry in the section tree.
  * Shows the creative name and a "+" button to place selected frames into it.
  * The button is disabled (grayed out) when no frames are selected on the page.
+ * @param root0
+ * @param root0.name
+ * @param root0.onAdd
+ * @param root0.enabled
  */
 export function CreativeRow({
   name,
@@ -38,7 +43,7 @@ export function CreativeRow({
           e.stopPropagation()
           if (enabled) onAdd()
         }}
-        title={enabled ? 'Добавить выделенные фреймы' : 'Выделите фреймы на странице'}
+        title={enabled ? BTN_ADD_FRAMES_TITLE : MSG_SELECT_FRAMES}
         style={{
           width: 18,
           height: 18,

@@ -8,6 +8,16 @@ import { PlatformLimitsSection } from '../../../widgets/platform-limits/ui/Platf
 import { GifDelayRow } from '../../../widgets/platform-limits/ui/components/GifDelayRow'
 import { ProgressBar } from '../../../shared/ui/ProgressBar'
 import { declension } from '../../../shared/lib/declension'
+import {
+  MSG_SCANNING,
+  BTN_RESCAN,
+  BTN_CANCEL,
+  BTN_CLEAR_EXPORT,
+  BTN_DOWNLOAD_ZIP,
+  SUFFIX_MB,
+  DECLENSION_FILE,
+  exportBtnLabel,
+} from '../../../shared/config/strings'
 
 /**
  * Export tab root component. Manages the `screen` state (`"main"` | `"resize-limits"`)
@@ -55,7 +65,7 @@ export function ExportPage() {
     return (
       <div style={{ padding: 16, textAlign: 'center' }}>
         <VerticalSpace space="large" />
-        <Muted>Сканирование страницы...</Muted>
+        <Muted>{MSG_SCANNING}</Muted>
       </div>
     )
   }
@@ -67,7 +77,7 @@ export function ExportPage() {
         <SetupGuide />
         <VerticalSpace space="small" />
         <Button fullWidth onClick={handleRescan}>
-          Пересканировать
+          {BTN_RESCAN}
         </Button>
       </div>
     )
@@ -148,7 +158,7 @@ export function ExportPage() {
           <div class="export-btn-wrap">
             <style>{`.export-btn-wrap button { padding: 12px 16px !important; font-size: 13px !important; height: auto !important; }`}</style>
             <Button fullWidth onClick={() => handleExport()}>
-              Экспорт ({items.length} {declension(items.length, 'файл', 'файла', 'файлов')})
+              {exportBtnLabel(items.length)}
             </Button>
           </div>
         </div>
@@ -176,7 +186,7 @@ export function ExportPage() {
                 flexShrink: 0,
               }}
             >
-              Отмена
+              {BTN_CANCEL}
             </span>
           </div>
           <VerticalSpace space="extraSmall" />
@@ -196,14 +206,14 @@ export function ExportPage() {
           <div class="export-btn-wrap">
             <style>{`.export-btn-wrap button { padding: 12px 16px !important; font-size: 13px !important; height: auto !important; }`}</style>
             <Button fullWidth onClick={handleDownload}>
-              Скачать ZIP
+              {BTN_DOWNLOAD_ZIP}
               {exportedFilter?.platform
                 ? ` ${exportedFilter.platform}`
                 : exportedFilter?.format
                   ? ` ${exportedFilter.format.toUpperCase()}`
                   : ''}{' '}
-              · {zipSizeMb} МБ · {exportedCount}{' '}
-              {declension(exportedCount, 'файл', 'файла', 'файлов')}
+              · {zipSizeMb} {SUFFIX_MB} · {exportedCount}{' '}
+              {declension(exportedCount, ...DECLENSION_FILE)}
             </Button>
           </div>
           <div style={{ textAlign: 'center', marginTop: 8 }}>
@@ -217,7 +227,7 @@ export function ExportPage() {
                 userSelect: 'none',
               }}
             >
-              Очистить экспорт
+              {BTN_CLEAR_EXPORT}
             </span>
           </div>
         </div>
