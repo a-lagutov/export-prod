@@ -1,4 +1,7 @@
 import * as config from '../config/index'
+import * as logger from '../logger'
+import { ditherPixels, makeChannelQuantize, DITHER_METHODS } from './dither'
+import type { DitherMethod } from './dither'
 
 /**
  * Decodes PNG bytes into an HTMLCanvasElement by creating a temporary Blob URL.
@@ -27,6 +30,7 @@ export function pngBytesToCanvas(pngBytes: Uint8Array): Promise<HTMLCanvasElemen
  * @param canvas - Source canvas to encode.
  * @param mimeType - Target MIME type (e.g. `"image/jpeg"`, `"image/webp"`).
  * @param quality - Encoding quality from 0.0 to 1.0 (ignored for PNG).
+ * @returns A Blob encoded in the given MIME type.
  */
 export function canvasToBlob(
   canvas: HTMLCanvasElement,
@@ -39,25 +43,73 @@ export function canvasToBlob(
 }
 
 /**
- * Finds the highest quality value that produces a Blob within the target size
+ * Creates a temporary canvas from raw RGBA pixel data and encodes it as PNG.
+ * @param pixels - RGBA pixel data (4 bytes per pixel, row-major).
+ * @param width - Image width in pixels.
+ * @param height - Image height in pixels.
+ * @returns A PNG Blob.
+ */
+function encodePng(pixels: Uint8ClampedArray, width: number, height: number): Promise<Blob> {
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  canvas.getContext('2d')!.putImageData(new ImageData(pixels, width, height), 0, 0)
+  return canvasToBlob(canvas, 'image/png')
+}
+
+/**
+ * Creates a temporary canvas from raw RGBA pixel data and encodes it as the given MIME type.
+ * @param pixels - RGBA pixel data (4 bytes per pixel, row-major).
+ * @param width - Image width in pixels.
+ * @param height - Image height in pixels.
+ * @param mimeType - Target MIME type (e.g. `"image/jpeg"`).
+ * @param quality - Encoding quality 0.0–1.0.
+ * @returns An encoded Blob.
+ */
+function encodeImage(
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number,
+  mimeType: string,
+  quality: number,
+): Promise<Blob> {
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  canvas.getContext('2d')!.putImageData(new ImageData(pixels, width, height), 0, 0)
+  return canvasToBlob(canvas, mimeType, quality)
+}
+
+/**
+ * Finds the highest quality value that produces a Blob within the target size,
  * using binary search over the quality range [0.0, 1.0].
- * @param canvas - Source canvas to encode.
+ * @param pixels - RGBA pixel data to encode (4 bytes per pixel, row-major).
+ * @param width - Image width in pixels.
+ * @param height - Image height in pixels.
  * @param mimeType - Target MIME type (JPG or WebP).
  * @param targetSize - Maximum allowed file size in bytes.
  * @returns The largest Blob that fits within targetSize, or the smallest possible if none fit.
  */
-export async function binarySearchQuality(
-  canvas: HTMLCanvasElement,
+async function binarySearchQuality(
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number,
   mimeType: string,
   targetSize: number,
 ): Promise<Blob> {
   let low = 0.0,
-    high = 1.0
-  let best: Blob | null = null
+    high = 1.0,
+    best: Blob | null = null
+
+  /**
+   * Recursively halves the search range for the remaining number of iterations.
+   * @param remainingIterations - How many iterations are left before stopping.
+   * @returns The best Blob found so far, or the lowest-quality encode if none fits.
+   */
   async function iterate(remainingIterations: number): Promise<Blob> {
-    if (remainingIterations <= 0) return best ?? canvasToBlob(canvas, mimeType, 0)
+    if (remainingIterations <= 0) return best ?? encodeImage(pixels, width, height, mimeType, 0)
     const mid = (low + high) / 2
-    const blob = await canvasToBlob(canvas, mimeType, mid)
+    const blob = await encodeImage(pixels, width, height, mimeType, mid)
     if (blob.size <= targetSize) {
       best = blob
       low = mid
@@ -66,64 +118,155 @@ export async function binarySearchQuality(
     }
     return iterate(remainingIterations - 1)
   }
+
   return iterate(config.JPG_SEARCH_ITERATIONS)
 }
 
 /**
- * Compresses a PNG to fit within the target size by reducing color quantization levels.
- * Uses binary search over the levels range defined in config (PNG_LEVELS_MIN–PNG_LEVELS_MAX).
+ * Compresses a PNG to fit within the target size by reducing per-channel colour
+ * quantisation levels and applying dithering to maintain visual quality.
+ *
+ * Strategy: for each of three dithering algorithms (Bayer, Floyd-Steinberg,
+ * Jarvis-Judice-Ninke), binary-search over the quantisation level range
+ * (PNG_LEVELS_MIN – PNG_LEVELS_MAX) to find the highest level (best quality)
+ * whose encoded PNG fits the limit.  The combination with the highest level is
+ * used; ties are broken in favour of the algorithm listed last in DITHER_METHODS
+ * (Jarvis-Judice-Ninke).
  * @param canvas - Source canvas with the original image.
  * @param targetSize - Maximum allowed file size in bytes.
- * @returns A PNG Blob within the target size, or the most compressed version if target is unreachable.
+ * @returns A PNG Blob within the target size.
  */
 export async function compressPngToTarget(
   canvas: HTMLCanvasElement,
   targetSize: number,
 ): Promise<Blob> {
   const { width, height } = canvas
-  const ctx = canvas.getContext('2d')!
-  const originalImageData = ctx.getImageData(0, 0, width, height)
+  const originalPixels = canvas.getContext('2d')!.getImageData(0, 0, width, height).data
 
-  async function quantize(levels: number): Promise<Blob> {
-    const tmpCanvas = document.createElement('canvas')
-    tmpCanvas.width = width
-    tmpCanvas.height = height
-    const tmpCtx = tmpCanvas.getContext('2d')!
-    const imgData = tmpCtx.createImageData(width, height)
-    const sourcePixels = originalImageData.data,
-      destPixels = imgData.data
-    const step = 256 / levels
-    for (let i = 0; i < sourcePixels.length; i += 4) {
-      destPixels[i] = Math.round(Math.round(sourcePixels[i] / step) * step)
-      destPixels[i + 1] = Math.round(Math.round(sourcePixels[i + 1] / step) * step)
-      destPixels[i + 2] = Math.round(Math.round(sourcePixels[i + 2] / step) * step)
-      destPixels[i + 3] = sourcePixels[i + 3]
+  // When a specific method is configured, skip the multi-algorithm search.
+  const methodsToTry = config.PNG_DITHER_CANDIDATES
+    ? config.DITHER_METHOD === 'best'
+      ? DITHER_METHODS
+      : [config.DITHER_METHOD]
+    : [config.DITHER_METHOD === 'best' ? 'jarvis-judice-ninke' : config.DITHER_METHOD]
+
+  let bestBlob: Blob | null = null
+  let bestLevels = 0
+  let bestMethod: DitherMethod | null = null
+
+  for (const method of methodsToTry) {
+    let lo = config.PNG_LEVELS_MIN,
+      hi = config.PNG_LEVELS_MAX,
+      methodBestBlob: Blob | null = null,
+      methodBestLevels = 0
+
+    for (let i = 0; i < config.PNG_SEARCH_ITERATIONS; i++) {
+      const mid = Math.floor((lo + hi) / 2)
+      const dithered = ditherPixels(method, originalPixels, width, height, makeChannelQuantize(mid))
+      const blob = await encodePng(dithered, width, height)
+      if (blob.size <= targetSize) {
+        methodBestBlob = blob
+        methodBestLevels = mid
+        lo = mid + 1
+      } else {
+        hi = mid - 1
+      }
     }
-    tmpCtx.putImageData(imgData, 0, 0)
-    return canvasToBlob(tmpCanvas, 'image/png')
+
+    // Accept this method if it achieves strictly more levels, or ties (higher-quality method wins).
+    if (methodBestBlob && methodBestLevels >= bestLevels) {
+      bestBlob = methodBestBlob
+      bestLevels = methodBestLevels
+      bestMethod = method
+    }
   }
 
-  let low = config.PNG_LEVELS_MIN,
-    high = config.PNG_LEVELS_MAX,
-    best: Blob | null = null
-  async function iterate(remainingIterations: number): Promise<Blob> {
-    if (remainingIterations <= 0) return best ?? quantize(config.PNG_LEVELS_MIN)
-    const mid = Math.floor((low + high) / 2)
-    const blob = await quantize(mid)
-    if (blob.size <= targetSize) {
-      best = blob
-      low = mid + 1
-    } else {
-      high = mid - 1
-    }
-    return iterate(remainingIterations - 1)
-  }
-  return iterate(8)
+  logger.log(
+    `png compress: method=${bestMethod ?? 'none'} levels=${bestLevels}/${config.PNG_LEVELS_MAX} size=${bestBlob?.size ?? 0}/${targetSize}`,
+  )
+
+  // Fallback: minimum levels with FS dithering.
+  return (
+    bestBlob ??
+    encodePng(
+      ditherPixels(
+        'floyd-steinberg',
+        originalPixels,
+        width,
+        height,
+        makeChannelQuantize(config.PNG_LEVELS_MIN),
+      ),
+      width,
+      height,
+    )
+  )
 }
 
 /**
- * Converts a raw PNG frame (exported from Figma) to the target format, applying size compression if needed.
- * For JPG/WebP uses quality binary search; for PNG uses color quantization binary search.
+ * Compresses a JPG or WebP frame to fit within the target size.
+ *
+ * Strategy: for each of three dithering pre-processing approaches (none, plus
+ * Bayer, Floyd-Steinberg, Jarvis-Judice-Ninke at a fixed mild quantisation level
+ * of JPG_DITHER_LEVELS), binary-search over quality (0–1) to find the highest
+ * quality that fits.  Dithering at a mild level helps break up smooth gradients
+ * before DCT encoding, reducing visible banding at moderate-to-low quality.
+ * The approach that produces the largest Blob still within the limit is used
+ * (most of the size budget consumed = highest quality).
+ * @param canvas - Source canvas with the original image.
+ * @param mimeType - Target MIME type (`"image/jpeg"` or `"image/webp"`).
+ * @param targetSize - Maximum allowed file size in bytes.
+ * @returns The best-quality Blob within the target size.
+ */
+export async function compressRasterToTarget(
+  canvas: HTMLCanvasElement,
+  mimeType: string,
+  targetSize: number,
+): Promise<Blob> {
+  const { width, height } = canvas
+  const originalPixels = canvas.getContext('2d')!.getImageData(0, 0, width, height).data
+  const ditheredLevelQuantize = makeChannelQuantize(config.JPG_DITHER_LEVELS)
+
+  const methodsToTry = config.DITHER_METHOD === 'best' ? DITHER_METHODS : [config.DITHER_METHOD]
+
+  let bestBlob: Blob | null = null
+  let bestLabel: DitherMethod | 'none' = 'none'
+
+  if (config.JPG_DITHER_CANDIDATES) {
+    // Candidates mode: try original + all dithered versions, pick the largest blob ≤ limit.
+    const candidates: Array<{ label: DitherMethod | 'none'; pixels: Uint8ClampedArray }> = [
+      { label: 'none', pixels: originalPixels },
+      ...methodsToTry.map((method) => ({
+        label: method,
+        pixels: ditherPixels(method, originalPixels, width, height, ditheredLevelQuantize),
+      })),
+    ]
+    for (const { label, pixels } of candidates) {
+      const blob = await binarySearchQuality(pixels, width, height, mimeType, targetSize)
+      if (!bestBlob || blob.size > bestBlob.size) {
+        bestBlob = blob
+        bestLabel = label
+      }
+    }
+  } else {
+    // Fixed mode: always apply dithering, no comparison with original.
+    const method = methodsToTry[methodsToTry.length - 1] // last = highest quality
+    const dithered = ditherPixels(method, originalPixels, width, height, ditheredLevelQuantize)
+    bestBlob = await binarySearchQuality(dithered, width, height, mimeType, targetSize)
+    bestLabel = method
+  }
+
+  logger.log(
+    `${mimeType.split('/')[1]} compress: method=${bestLabel} size=${bestBlob?.size ?? 0}/${targetSize}`,
+  )
+
+  return bestBlob!
+}
+
+/**
+ * Converts a raw PNG frame (exported from Figma) to the target format, applying
+ * size compression and dithering if needed.
+ *   - JPG/WebP: multi-candidate quality binary search (original + 3 dithering pre-processings).
+ *   - PNG: multi-algorithm dithering + quantisation level binary search.
  * @param pngBytes - Raw PNG bytes from Figma export.
  * @param format - Target format: `"jpg"`, `"png"`, or `"webp"`.
  * @param limit - Maximum file size in bytes, or null for no limit (maximum quality).
@@ -135,9 +278,13 @@ export async function convertFrame(
   limit: number | null,
 ): Promise<Blob> {
   const canvas = await pngBytesToCanvas(pngBytes)
+
   if (format === 'png') {
     return limit ? compressPngToTarget(canvas, limit) : canvasToBlob(canvas, 'image/png')
   }
+
   const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/webp'
-  return limit ? binarySearchQuality(canvas, mimeType, limit) : canvasToBlob(canvas, mimeType, 1.0)
+  return limit
+    ? compressRasterToTarget(canvas, mimeType, limit)
+    : canvasToBlob(canvas, mimeType, 1.0)
 }

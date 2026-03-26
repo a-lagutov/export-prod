@@ -197,9 +197,11 @@ For GIF: frames at the same Y position are grouped into one animation, sorted le
 
 ## Compression Strategy
 
-- **JPG/WebP**: Binary search over quality parameter (0.0–1.0) to hit size limit.
-- **PNG**: Binary search over color quantization levels (2–256) to hit size limit.
-- **GIF**: For each of three dithering algorithms (Bayer, Floyd-Steinberg, Jarvis-Judice-Ninke), binary search over `maxColors` (2–255) to find the maximum palette size that fits within the limit. The combination with the highest `maxColors` is used; ties are broken by algorithm quality rank (JJN wins). Without a limit, JJN at `maxColors=255` is used directly. Bayer is included because it produces temporally stable patterns (no inter-frame flicker in static areas). Dithered frames are pre-rendered onto canvases before passing to modern-gif so the dithering is preserved exactly.
+All formats apply Floyd-Steinberg / Bayer / Jarvis-Judice-Ninke dithering (shared `src/shared/lib/dither.ts`, generic `QuantizeFn` callback). Active algorithm is controlled by `DITHER_METHOD` in `shared/config/index.ts` (`'best'` | `'floyd-steinberg'` | `'bayer'` | `'jarvis-judice-ninke'`).
+
+- **JPG/WebP**: Binary search over quality (0.0–1.0). Dithering is applied as pre-processing (uniform channel quantisation at `JPG_DITHER_LEVELS`). `JPG_DITHER_CANDIDATES=true` tries original + dithered versions and keeps the largest blob ≤ limit; `false` always applies dithering directly. Selected method is logged in dev mode.
+- **PNG**: Binary search over quantisation levels (2–256) with dithering applied during quantisation. `PNG_DITHER_CANDIDATES=true` tries all methods and keeps the highest levels; `false` uses `DITHER_METHOD` directly. Selected method and levels are logged in dev mode.
+- **GIF**: Binary search over `maxColors` (2–255). Palette built via `modern-palette`, frames pre-dithered and passed to `modern-gif` (pixels already match palette colours → `findNearestIndex` hits exact matches). `GIF_DITHER_CANDIDATES=true` tries all methods and keeps the highest `maxColors`; `false` uses `DITHER_METHOD` directly. Without a limit, JJN at `maxColors=255` is used. Selected method is logged in dev mode.
 
 Frame processing is sequential (one at a time) to avoid overloading the Figma plugin bridge.
 

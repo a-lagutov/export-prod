@@ -127,11 +127,15 @@ The screen has a search field and two view modes toggled by icons in the header:
 
 #### Compression Algorithm
 
-| Format     | Method                                                                                                              |
-| ---------- | ------------------------------------------------------------------------------------------------------------------- |
-| JPG / WebP | Binary search over `quality` parameter (0–1)                                                                        |
-| PNG        | Binary search over color quantization level (2–256)                                                                 |
-| GIF        | Binary search over `maxColors` (2–255) × 3 dithering algorithms (Bayer, Floyd-Steinberg, Jarvis-Judice-Ninke); the combination achieving the highest palette size within the limit is used |
+All formats use Floyd-Steinberg / Bayer / Jarvis-Judice-Ninke dithering. The active algorithm and per-format candidate search are configured in `src/shared/config/index.ts` (`DITHER_METHOD`, `JPG/PNG/GIF_DITHER_CANDIDATES`).
+
+| Format     | Method                                                                                                   |
+| ---------- | -------------------------------------------------------------------------------------------------------- |
+| JPG / WebP | Binary search over `quality` (0–1); dithering applied as pre-processing at `JPG_DITHER_LEVELS`          |
+| PNG        | Binary search over quantisation levels (2–256) with dithering applied during quantisation               |
+| GIF        | Binary search over `maxColors` (2–255) with dithering; palette via `modern-palette`, frames pre-dithered |
+
+With `*_DITHER_CANDIDATES=true` all three algorithms are tried and the best result is kept. With `false` `DITHER_METHOD` is used directly (faster). Selected method is logged in dev mode.
 
 #### ZIP Path Mode
 
@@ -317,11 +321,15 @@ xxxx-yyy
 
 #### Алгоритм сжатия
 
-| Формат     | Метод                                                                                                                                                   |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| JPG / WebP | Бинарный поиск по параметру `quality` (0–1)                                                                                                             |
-| PNG        | Бинарный поиск по уровню квантования цвета (2–256)                                                                                                      |
-| GIF        | Бинарный поиск по `maxColors` (2–255) × 3 алгоритма дизеринга (Bayer, Floyd-Steinberg, Jarvis-Judice-Ninke); выбирается комбинация с наибольшей палитрой в рамках лимита |
+Все форматы используют дизеринг (Floyd-Steinberg / Bayer / Jarvis-Judice-Ninke). Активный алгоритм и режим поиска кандидатов настраиваются в `src/shared/config/index.ts` (`DITHER_METHOD`, `JPG/PNG/GIF_DITHER_CANDIDATES`).
+
+| Формат     | Метод                                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------------------------ |
+| JPG / WebP | Бинарный поиск по `quality` (0–1); дизеринг применяется как пре-обработка на `JPG_DITHER_LEVELS` уровнях          |
+| PNG        | Бинарный поиск по уровням квантования (2–256) с дизерингом во время квантования                                   |
+| GIF        | Бинарный поиск по `maxColors` (2–255) с дизерингом; палитра через `modern-palette`, кадры пре-дизерятся           |
+
+При `*_DITHER_CANDIDATES=true` перебираются все три алгоритма и выбирается лучший результат. При `false` используется `DITHER_METHOD` напрямую (быстрее). Выбранный метод логируется в dev-режиме.
 
 #### Режим путей в ZIP
 

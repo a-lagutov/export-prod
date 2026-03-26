@@ -31,8 +31,35 @@ export const CREATIVE_SECTION_OPACITY = 0.8
 
 // ── Compression ───────────────────────────────────────────────────────────────
 
+/** Available dithering algorithms. */
+export type DitherMethod = 'floyd-steinberg' | 'jarvis-judice-ninke' | 'bayer'
+
+/**
+ * Dithering method to use during compression.
+ * `'best'` — try all three algorithms and pick the one that achieves the highest
+ * quality (maxColors for GIF, quantisation levels for PNG, largest blob for JPG/WebP).
+ * Set to a specific method name to skip the multi-algorithm search and always
+ * use that algorithm (faster export, useful when you know the best method from logs).
+ */
+export const DITHER_METHOD: DitherMethod | 'best' = 'jarvis-judice-ninke'
+
 /** Number of binary search iterations for JPG/WebP quality */
 export const JPG_SEARCH_ITERATIONS = 8
+
+/**
+ * When true, quality binary search runs on both the original and dithered versions;
+ * the candidate producing the largest blob ≤ limit wins (original usually wins for JPG/WebP).
+ * When false, dithering is always applied to frames that have a size limit — no comparison
+ * with the original.
+ */
+export const JPG_DITHER_CANDIDATES = false
+
+/**
+ * Per-channel quantisation levels for the JPG/WebP dithering pre-processing step.
+ * 64 levels ≈ 4-bit per channel — mild enough to be barely perceptible on its own,
+ * sufficient to break up smooth gradients before DCT encoding.
+ */
+export const JPG_DITHER_LEVELS = 64
 
 /** Number of binary search iterations for PNG quantization */
 export const PNG_SEARCH_ITERATIONS = 8
@@ -41,8 +68,22 @@ export const PNG_SEARCH_ITERATIONS = 8
 export const PNG_LEVELS_MIN = 2
 export const PNG_LEVELS_MAX = 256
 
+/**
+ * When true, binary search runs for each dithering algorithm and the one achieving
+ * the highest quantisation levels ≤ limit wins.
+ * When false, DITHER_METHOD is applied directly — no multi-algorithm comparison.
+ */
+export const PNG_DITHER_CANDIDATES = false
+
 /** Number of binary search iterations for GIF maxColors */
 export const GIF_SEARCH_ITERATIONS = 6
+
+/**
+ * When true, binary search runs for each dithering algorithm and the one achieving
+ * the highest maxColors ≤ limit wins.
+ * When false, DITHER_METHOD is applied directly — no multi-algorithm comparison.
+ */
+export const GIF_DITHER_CANDIDATES = true
 
 // ── GIF animation ─────────────────────────────────────────────────────────────
 
