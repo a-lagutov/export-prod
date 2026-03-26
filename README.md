@@ -109,7 +109,7 @@ Layout rules:
 
 When clicking "Export":
 
-1. All frames are automatically renamed to `{width}x{height}` (e.g., `1080x1920`). The same renaming also happens when running **"Выровнять секции"** (Align sections).
+1. All frames are automatically renamed to `{width}x{height}` (e.g., `1080x1920`); dimensions are rounded to integers to avoid Figma float precision artefacts. The same renaming also happens when running **"Выровнять секции"** (Align sections).
 2. Frames are exported one at a time (PNG → target format).
 3. Compression is applied to meet file size limits.
 4. Results are packaged into ZIP.
@@ -303,7 +303,7 @@ xxxx-yyy
 
 При нажатии «Экспорт»:
 
-1. Все фреймы автоматически переименовываются в `{ширина}x{высота}` (например, `1080x1920`). То же переименование выполняется при нажатии **«Выровнять секции»**.
+1. Все фреймы автоматически переименовываются в `{ширина}x{высота}` (например, `1080x1920`); размеры округляются до целых, чтобы избежать артефактов float-точности Figma. То же переименование выполняется при нажатии **«Выровнять секции»**.
 2. Фреймы экспортируются по одному (PNG → целевой формат).
 3. Применяется сжатие для соблюдения лимитов по размеру файла.
 4. Результат упаковывается в ZIP.

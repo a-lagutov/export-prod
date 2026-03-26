@@ -10,7 +10,11 @@ import * as config from '../../../shared/config'
 
 export let isExporting = false
 
-/** Forwards a log message from the code thread to the UI thread via the `code-log` message. */
+/**
+ * Forwards a log message from the code thread to the UI thread via the `code-log` message.
+ * @param message
+ * @param data
+ */
 function codeLog(message: string, data?: unknown): void {
   emit('code-log', { level: 'log', message, data })
 }
@@ -18,6 +22,7 @@ function codeLog(message: string, data?: unknown): void {
 /**
  * Checks whether a Figma node belongs to the currently active page by walking up the parent chain.
  * Detached nodes (e.g. just deleted) are conservatively treated as being on the current page.
+ * @param node
  */
 function isOnCurrentPage(node: BaseNode): boolean {
   let n: BaseNode | null = node
@@ -106,7 +111,7 @@ export function register(): void {
         for (const nodeId of item.nodeIds) {
           const node = await figma.getNodeByIdAsync(nodeId)
           if (node && node.type === 'FRAME') {
-            const frameName = `${(node as FrameNode).width}x${(node as FrameNode).height}`
+            const frameName = `${Math.round((node as FrameNode).width)}x${Math.round((node as FrameNode).height)}`
             node.name = frameName
           }
         }

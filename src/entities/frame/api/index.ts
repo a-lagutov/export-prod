@@ -85,7 +85,7 @@ export function scanPage(): { tree: TreeNode[]; items: ExportItem[] } {
           } else {
             const sizeCount = new Map<string, number>()
             for (const frame of frames) {
-              const sizeKey = `${frame.width}x${frame.height}`
+              const sizeKey = `${Math.round(frame.width)}x${Math.round(frame.height)}`
               const count = (sizeCount.get(sizeKey) || 0) + 1
               sizeCount.set(sizeKey, count)
               const suffix = count > 1 ? `_${count}` : ''

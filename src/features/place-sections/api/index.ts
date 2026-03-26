@@ -228,7 +228,7 @@ export function register(): void {
             if (!isSection(cr)) continue
             for (const child of cr.children) {
               if (isExportableNode(child)) {
-                child.name = `${child.width}x${child.height}`
+                child.name = `${Math.round(child.width)}x${Math.round(child.height)}`
               }
             }
             fitSectionToChildren(cr, config.ALIGN_PADDING)

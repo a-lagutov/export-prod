@@ -260,7 +260,7 @@ Common behaviours:
 - **New format section positioning**: if other format sections already exist on the page, the new one is placed `FORMAT_SECTION_GAP` px to the right of the rightmost; if no format sections exist yet, it is placed at the absolute position of the selected frames and automatically selected in Figma.
 - **Section fitting** (`fitSectionToChildren` in `src/shared/lib/figma.ts`): works in local coordinates — shifts the section origin so content has `padding` space on all sides, compensates children's local positions to keep their absolute positions unchanged, then resizes. Uses local coords (not `absoluteBoundingBox`) to avoid stale values after `appendChild`. Default padding is `SECTION_FIT_PADDING` (see `shared/config/index.ts`).
 - **`SelectionIndicator`** renders only the "Выровнять секции" link — it no longer accepts or displays `selectedCount`.
-- **Align sections** (`align-sections` handler): before fitting each creative section, all exportable nodes (FRAME, COMPONENT, INSTANCE) inside it are renamed to `{width}x{height}` — the same renaming that happens at export start.
+- **Align sections** (`align-sections` handler): before fitting each creative section, all exportable nodes (FRAME, COMPONENT, INSTANCE) inside it are renamed to `{width}x{height}` — the same renaming that happens at export start. Width and height are rounded with `Math.round` to avoid Figma float precision artefacts (e.g. `240.00001525878906` → `240`).
 
 ## Analytics (`src/shared/analytics/index.ts`)
 
